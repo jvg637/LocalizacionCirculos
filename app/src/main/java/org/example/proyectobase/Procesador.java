@@ -106,6 +106,8 @@ public class Procesador {
         if (binaria.channels() > 1)
             return binaria.clone();
 
+        List<Rect> circulosSalida = new ArrayList<>();
+
         List<MatOfPoint> blobs = new ArrayList<>();
         Mat hierarchy = new Mat();
         Mat salida = binaria.clone();//Copia porque finContours modifica entrada
@@ -141,88 +143,67 @@ public class Procesador {
                     (BB.y + BB.height) < 3)
                 continue;
 // Aqui cumple todos los criterios. Dibujamos
-            final Point P1 = new Point(BB.x, BB.y);
-            final Point P2 = new Point(BB.x + BB.width - 1, BB.y + BB.height - 1);
+            final Point P1 = new Point(BB.x-1, BB.y-1);
+            final Point P2 = new Point(BB.x + BB.width - 2, BB.y + BB.height - 2);
 
-
-            circulos.add(BB);
+            eliminaCirculosConcentricos(circulosSalida, BB);
             Imgproc.rectangle(salida, P1, P2, new Scalar(255, 0, 0));
         } // for
 
 
-        List<Rect> circulosSalida = new ArrayList<>();
-
-        if (circulos.size() > 0) {
-            Log.d("CIRCULOS", "Total circulos: " + circulos.size());
-
-            for (int i = 0; i < circulos.size(); i++) {
-                Rect circuloA = circulos.get(i);
-
-                Point P1A = new Point(circuloA.x, circuloA.y);
-                Point P2A = new Point(circuloA.x + circuloA.width - 1, circuloA.y + circuloA.height - 1);
-
-                boolean insertado = false;
-
-                for (int j = i + 1; j < circulos.size(); j++) {
-                    Rect circuloB = circulos.get(j);
-                    Point P1B = new Point(circuloB.x, circuloB.y);
-                    Point P2B = new Point(circuloB.x + circuloB.width - 1, circuloB.y + circuloB.height - 1);
-
-                    float relacionA = (float) circuloA.width / (float) circuloB.width;
-                    float relacionB = 1 / relacionA;
-                    // circuloB candidato
-                    boolean insertar = true;
-                    if (circuloA.contains(P1B) && circuloA.contains(P2B) && relacionB > 0.5) {
-                        // Buscamos si hay otro circulo contenido
-                        for (Rect circuloAux : circulosSalida) {
-                            // Aux < B
-                            if (circuloB.contains(circuloAux.tl()) && circuloB.contains(circuloAux.br())) {
-                                circulosSalida.remove(circuloAux);
-                                break;
-                            } else {
-                                if (circuloAux.contains(P1B) && circuloAux.contains(P2B)) {
-                                    insertar = false;
-                                    break;
-                                }
-                            }
-                        }
-                        if (insertar)
-                            circulosSalida.add(new Rect(P1B, P2B));
-                    } else {
-                        // circuloA candidato
-                        if (circuloB.contains(P1A) && circuloB.contains(P2A) && relacionB < 2) {
-                            // Buscamos si hay otro circulo contenido
-                            for (Rect circuloAux : circulosSalida) {
-                                // Aux < B
-                                if (circuloA.contains(circuloAux.tl()) && circuloA.contains(circuloAux.br())) {
-                                    circulosSalida.remove(circuloAux);
-                                    break;
-                                } else {
-                                    if (circuloAux.contains(P1B) && circuloAux.contains(P2B)) {
-                                        insertar = false;
-                                        break;
-                                    }
-                                }
-                            }
-                            if (insertar) {
-                                circulosSalida.add(new Rect(P1A, P2A));
-                            }
-                        }
-                    }
-                }
-            }
-
-            for (Rect circulo : circulosSalida) {
-                Log.d("CIRCULOS", circulo.toString());
-                Imgproc.rectangle(salida, circulo.tl(), circulo.br(), new Scalar(0, 255, 0));
-            }
-
-            if (circulosSalida.size() > 1) {
-                Log.d("CIRCULOS", circulosSalida.toString());
-            }
+        for (Rect circulo : circulosSalida) {
+            Log.d("CIRCULOS", circulo.toString());
+            Imgproc.rectangle(salida, circulo.tl(), circulo.br(), new Scalar(0, 255, 0));
         }
+
         return salida;
     }
+
+    private void eliminaCirculosConcentricos(List<Rect> circulosSalida, Rect circuloA) {
+        final Point P1A = new Point(circuloA.x, circuloA.y);
+        final Point P2A = new Point(circuloA.x + circuloA.width - 1, circuloA.y + circuloA.height - 1);
+
+        for (int j = 0; j < circulosSalida.size(); j++) {
+            Rect circuloB = circulosSalida.get(j);
+            Point P1B = new Point(circuloB.x, circuloB.y);
+            Point P2B = new Point(circuloB.x + circuloB.width - 1, circuloB.y + circuloB.height - 1);
+
+            float relacionA = (float) circuloA.width / (float) circuloB.width;
+            float relacionB = 1 / relacionA;
+            // circuloB candidato
+            boolean insertar = true;
+            if (circuloA.contains(P1B) && circuloA.contains(P2B)) {
+                if (relacionB > 0.5) {
+                    // A es mucho más grande que B. Se queda B
+                    return;
+                } else {
+                    // B es mucho más pequeño que A
+                    // Se borra B y se inserta A
+                    circulosSalida.remove(circuloB);
+                    j--;
+//                    circulosSalida.add(new Rect(P1A, P2A));
+                }
+
+            } else {
+                // circuloA candidato
+                if (circuloB.contains(P1A) && circuloB.contains(P2A)) {
+                    // B es mas grande que A. Se queda A
+                    if (relacionB < 2) {
+                        circulosSalida.remove(circuloB);
+                        j--;
+//                        circulosSalida.add(new Rect(P1A, P2A));
+                    } else {
+                        // A es mucho más pequeño que B
+                        // No se inserta A
+                        return;
+                    }
+
+                }
+            }
+        }
+        circulosSalida.add(new Rect(P1A, P2A));
+    }
+
 
     void mitadMitad(Mat entrada, Mat salida) {
         if (entrada.channels() > salida.channels()) {
