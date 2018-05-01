@@ -142,11 +142,12 @@ public class Procesador {
             if (binaria.width() - (BB.x + BB.width) < 3 || binaria.height() -
                     (BB.y + BB.height) < 3)
                 continue;
+
+            insertarEliminandoCirculosConcentricos(circulosSalida, BB);
 // Aqui cumple todos los criterios. Dibujamos
             final Point P1 = new Point(BB.x-1, BB.y-1);
             final Point P2 = new Point(BB.x + BB.width - 2, BB.y + BB.height - 2);
 
-            eliminaCirculosConcentricos(circulosSalida, BB);
             Imgproc.rectangle(salida, P1, P2, new Scalar(255, 0, 0));
         } // for
 
@@ -159,7 +160,7 @@ public class Procesador {
         return salida;
     }
 
-    private void eliminaCirculosConcentricos(List<Rect> circulosSalida, Rect circuloA) {
+    private void insertarEliminandoCirculosConcentricos(List<Rect> circulosSalida, Rect circuloA) {
         final Point P1A = new Point(circuloA.x, circuloA.y);
         final Point P2A = new Point(circuloA.x + circuloA.width - 1, circuloA.y + circuloA.height - 1);
 
