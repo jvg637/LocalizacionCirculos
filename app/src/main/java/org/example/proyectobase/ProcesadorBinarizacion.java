@@ -102,4 +102,14 @@ public class ProcesadorBinarizacion {
         return salida;
 
     }
+
+    public Mat Canny(Mat entrada, int tamano, int contraste) {
+        if (entrada.channels() > 1) {
+            return entrada.clone();
+        }
+        Mat salida = new Mat();
+        Imgproc.Canny(entrada, salida, 75, 200);
+
+        return salida;
+    }
 }

@@ -35,11 +35,12 @@ public class Procesador {
         entrada_mitad_izquierda = new Mat();
     } //Constructor
 
-    public Mat procesa(Mat entrada) {
-        Mat salida;
-        // Aumento Lineal Contraste
-        if (aumentoLineal) {
-            Mat salidaAux = procesadorIntensidad.aumentoLinealContraste(entrada);
+//    public Mat procesaEjerciciosAnterioresSegmentarInteriorCirculo(Mat entrada) {
+//        Mat salida;
+//        List<Rect> rectCirculos = new ArrayList<>();
+    // Aumento Lineal Contraste
+//        if (aumentoLineal) {
+//            Mat salidaAux = procesadorIntensidad.aumentoLinealContraste(entrada);
 //            salida = procesadorColor.deteccionZonasRojas(salidaAux);
 //            salida = procesadorColor.deteccionZonasVerdes(salidaAux);
 //            salida = procesarLocal.filtroPANeg(salidaAux);
@@ -60,16 +61,30 @@ public class Procesador {
 //            Binarización usando Otsu
 //            salida = procesarBinarizacion.otsu(salidaAux);
 
-//            Binarización gradiente morfológico
-            Mat salidaAux2 = procesarLocal.residuoGradienteDilatacion(salidaAux, 3);
-            Mat salidaAux3 = procesarBinarizacion.adaptativa(salidaAux2, 7, 7);
+//            Binarización gradiente morfológico y detección circulos
+//            Mat salidaAux2 = procesarLocal.residuoGradienteDilatacion(salidaAux, 3);
+//            Mat salidaAux3 = procesarBinarizacion.adaptativa(salidaAux2, 7, 7);
+//
+//            salida = localizarCirculos(salidaAux3);
+//            salidaAux.release();
+//            salidaAux2.release();
+//            salidaAux3.release();
 
-            salida = localizarCirculos(salidaAux3);
-            salidaAux.release();
-            salidaAux2.release();
-            salidaAux3.release();
+//            Binarización zonas Rojas y localizacón circulos
+//            Mat salidaAux2 = procesadorColor.deteccionZonasRojas(salidaAux);
+//            Mat salidaAux3 = procesarBinarizacion.maxDivided4(salidaAux2);
+//            salida = localizarCirculos(salidaAux3, rectCirculos);
+//            salidaAux.release();
+//            salidaAux2.release();
+//            salidaAux3.release();
 
-        } else {
+//            Binarización Canny y localizacón circulos
+//            Mat salidaAux2 = procesarBinarizacion.Canny(salidaAux, 75, 200);
+//            salida = localizarCirculos(salidaAux2);
+//            salidaAux.release();
+//            salidaAux2.release();
+
+//        } else {
 //            salida = procesadorColor.deteccionZonasRojas(entrada);
 //            salida = procesadorColor.deteccionZonasVerdes(entrada);
 //            salida = procesarLocal.filtroPANeg(entrada);
@@ -89,24 +104,128 @@ public class Procesador {
 //            Binarización usando Otsu
 //            salida = procesarBinarizacion.otsu(entrada);
 
-//            Binarización gradiente morfológico
-            Mat salidaAux = procesarLocal.residuoGradienteDilatacion(entrada, 3);
-            Mat salidaAux2 = procesarBinarizacion.adaptativa(salidaAux, 7, 7);
-            salida = localizarCirculos(salidaAux2);
-            salidaAux.release();
-            salidaAux2.release();
+//            Binarización gradiente morfológico y detección circulos
+//            Mat salidaAux = procesarLocal.residuoGradienteDilatacion(entrada, 3);
+//            Mat salidaAux2 = procesarBinarizacion.adaptativa(salidaAux, 7, 7);
+//            salida = localizarCirculos(salidaAux2);
+//            salidaAux.release();
+//            salidaAux2.release();
 
+//            Binarización zonas Rojas y localizacón circulos
+//            Mat salidaAux = procesadorColor.deteccionZonasRojas(entrada);
+//            Mat salidaAux2 = procesarBinarizacion.maxDivided4(salidaAux);
+////            salida = localizarCirculos(salidaAux2, rectCirculos);
+//            salidaAux.release();
+//            salidaAux2.release();
+
+//            Binarización Canny y localizacón circulos
+//            Mat salidaAux = procesarBinarizacion.Canny(entrada, 75, 200);
+//            salida = localizarCirculos(salidaAux);
+//            salidaAux.release();
+//        }
+//        rectCirculos.clear();
+//        return salida;
+//    }
+
+    public Mat procesa(Mat entrada) {
+        Mat salida;
+        List<Rect> rectCirculos = new ArrayList<>();
+        // Aumento Lineal Contraste
+        Mat salidaIntensidad;
+
+        Mat salidaGris = new Mat();
+        Imgproc.cvtColor(entrada, salidaGris, Imgproc.COLOR_RGBA2GRAY);
+        if (aumentoLineal) {
+            salidaIntensidad = procesadorIntensidad.aumentoLinealContraste(salidaGris);
+        } else {
+            salidaIntensidad = salidaGris;
         }
 
+//            Binarización gradiente morfológico y detección circulos
+        Mat salidaPreproceso = procesarLocal.residuoGradienteDilatacion(salidaIntensidad, 3);
+        Mat salidaBinarizacionPreproceso = procesarBinarizacion.adaptativa(salidaPreproceso, 7, 7);
+        localizarCirculos(salidaBinarizacionPreproceso, rectCirculos);
+
+        if (salidaBinarizacionPreproceso.channels() > 1)
+            salida = entrada.clone();
+        else {
+            salida = new Mat();
+            Imgproc.cvtColor(salidaBinarizacionPreproceso, salida, Imgproc.COLOR_GRAY2RGBA);
+        }
+
+        for (Rect circulo : rectCirculos) {
+            Log.d("CIRCULOS", circulo.toString());
+            Imgproc.rectangle(salida, circulo.tl(), circulo.br(), new Scalar(0, 255, 0));
+        }
+
+
+        for (Rect rectCirculo : rectCirculos) {
+            segmentarInteriorDisco(salidaBinarizacionPreproceso, rectCirculo);
+        }
+
+
+        // Libera Memoria
+        salidaGris.release();
+        if (salidaIntensidad != salidaGris) {
+            salidaIntensidad.release();
+        }
+        salidaPreproceso.release();
+        salidaBinarizacionPreproceso.release();
+        rectCirculos.clear();
         return salida;
     }
 
-    private Mat localizarCirculos(Mat binaria) {
+    private void localizarCirculos(Mat binaria, List<Rect> rectCirculos) {
+        if (binaria.channels() > 1)
+            return;
 
+        List<MatOfPoint> blobs = new ArrayList<>();
+        Mat hierarchy = new Mat();
+
+        Imgproc.findContours(binaria, blobs, hierarchy, Imgproc.RETR_CCOMP,
+                Imgproc.CHAIN_APPROX_NONE);
+        int minimumHeight = 30;
+        float maxratio = (float) 0.75;
+
+        // Seleccionar candidatos a circulos
+        for (int c = 0; c < blobs.size(); c++) {
+            double[] data = hierarchy.get(0, c);
+            // [next, previus, child, parent]
+            int parent = (int) data[3];
+            if (parent < 0) //Contorno exterior: rechazar
+                continue;
+            Rect BB = Imgproc.boundingRect(blobs.get(c));
+// Comprobar tamaño
+            if (BB.width < minimumHeight || BB.height < minimumHeight)
+                continue;
+// Comprobar anchura similar a altura
+            float wf = BB.width;
+            float hf = BB.height;
+            float ratio = wf / hf;
+            if (ratio < maxratio || ratio > 1.0 / maxratio)
+                continue;
+// Comprobar no está cerca del borde
+            if (BB.x < 2 || BB.y < 2)
+                continue;
+            if (binaria.width() - (BB.x + BB.width) < 3 || binaria.height() -
+                    (BB.y + BB.height) < 3)
+                continue;
+
+            insertarEliminandoCirculosConcentricos(rectCirculos, BB);
+// Aqui cumple todos los criterios. Dibujamos
+//            final Point P1 = new Point(BB.x - 1, BB.y - 1);
+//            final Point P2 = new Point(BB.x + BB.width - 2, BB.y + BB.height - 2);
+//
+//            Imgproc.rectangle(salida, P1, P2, new Scalar(255, 0, 0));
+        } // for
+
+        return;
+    }
+
+
+    private Mat segmentarInteriorDisco(Mat binaria, Rect rectCirculo) {
         if (binaria.channels() > 1)
             return binaria.clone();
-
-        List<Rect> circulosSalida = new ArrayList<>();
 
         List<MatOfPoint> blobs = new ArrayList<>();
         Mat hierarchy = new Mat();
@@ -143,19 +262,13 @@ public class Procesador {
                     (BB.y + BB.height) < 3)
                 continue;
 
-            insertarEliminandoCirculosConcentricos(circulosSalida, BB);
+//            insertarEliminandoCirculosConcentricos(rectCirculo, BB);
 // Aqui cumple todos los criterios. Dibujamos
-            final Point P1 = new Point(BB.x-1, BB.y-1);
-            final Point P2 = new Point(BB.x + BB.width - 2, BB.y + BB.height - 2);
-
-            Imgproc.rectangle(salida, P1, P2, new Scalar(255, 0, 0));
+//            final Point P1 = new Point(BB.x - 1, BB.y - 1);
+//            final Point P2 = new Point(BB.x + BB.width - 2, BB.y + BB.height - 2);
+//
+//            Imgproc.rectangle(salida, P1, P2, new Scalar(255, 0, 0));
         } // for
-
-
-        for (Rect circulo : circulosSalida) {
-            Log.d("CIRCULOS", circulo.toString());
-            Imgproc.rectangle(salida, circulo.tl(), circulo.br(), new Scalar(0, 255, 0));
-        }
 
         return salida;
     }
