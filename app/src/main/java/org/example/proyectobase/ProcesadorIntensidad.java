@@ -134,4 +134,10 @@ public class ProcesadorIntensidad {
         Imgproc.equalizeHist(entrada, salida);
         return salida;
     }
+
+    public Mat toGray(Mat entrada) {
+        Mat salida = new Mat();
+        Imgproc.cvtColor(entrada, salida, Imgproc.COLOR_RGBA2GRAY);
+        return salida;
+    }
 }
