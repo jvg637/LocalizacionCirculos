@@ -2,6 +2,7 @@ package org.example.proyectobase;
 
 import org.opencv.core.Core;
 import org.opencv.core.Mat;
+import org.opencv.core.Scalar;
 import org.opencv.imgproc.Imgproc;
 
 public class ProcesadorBinarizacion {
@@ -108,7 +109,18 @@ public class ProcesadorBinarizacion {
             return entrada.clone();
         }
         Mat salida = new Mat();
-        Imgproc.Canny(entrada, salida, 75, 200);
+        Imgproc.Canny(entrada, salida, tamano, contraste);
+//        Imgproc.Canny(entrada, salida, 75, 200);
+        return salida;
+    }
+    public Mat media(Mat entrada, int margen) {
+        Mat salida = new Mat();
+
+        Scalar mediaMat = Core.mean(entrada);
+//        int avg = (int) ((mediaMat.val)[0] + 20);
+        int avg = (int) ((mediaMat.val)[0] *1.8d);
+        Imgproc.threshold(entrada, salida, avg, 255, Imgproc.THRESH_BINARY);
+
 
         return salida;
     }

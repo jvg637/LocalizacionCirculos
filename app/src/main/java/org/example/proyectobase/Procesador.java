@@ -15,7 +15,6 @@ import org.opencv.core.Scalar;
 import org.opencv.core.Size;
 import org.opencv.imgproc.Imgproc;
 
-import java.net.BindException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -44,7 +43,8 @@ public class Procesador {
     private final int MUESTRAS_POR_CLASE = 2;
     private final int NUMERO_CARACTERISTICAS = 9;
 
-    void crearTabla() {
+    void crearTablasAuxiliares() {
+        // Genera el vecotr de caractarísticas: 0..20 (0 y 10 son el 0, 1 y 11 son el 1, etc)
         double datosEntrenamiento[][] = new double[][]{
                 new double[]{0.5757916569709778, 0.8068438172340393,
                         0.6094995737075806, 0.6842694878578186, 0, 0.6750765442848206,
@@ -118,7 +118,17 @@ public class Procesador {
                         0.6339869499206543}};
         for (int i = 0; i < 20; i++)
             tabla_caracteristicas.put(i, 0, datosEntrenamiento[i]);
+
+        // Ordena el vector de velocidades permitidas en España
+        Arrays.sort(velocidadesEspanya, comparatorStr);
     }
+
+    private Comparator<String> comparatorStr = new Comparator<String>() {
+        @Override
+        public int compare(String strA, String strB) {
+            return strA.compareTo(strB);
+        }
+    };
 
     public Procesador() {
         procesadorIntensidad = new ProcesadorIntensidad();
@@ -127,7 +137,7 @@ public class Procesador {
         procesarBinarizacion = new ProcesadorBinarizacion();
         tabla_caracteristicas = new Mat(NUMERO_CLASES * MUESTRAS_POR_CLASE,
                 NUMERO_CARACTERISTICAS, CvType.CV_64FC1);
-        crearTabla();
+        crearTablasAuxiliares();
 
         salida_mitad_izquierda = new Mat();
         entrada_mitad_izquierda = new Mat();
@@ -327,19 +337,22 @@ public class Procesador {
         }
 
 //            Binarización gradiente morfológico y detección circulos
-        Mat salidaPreproceso = procesarLocal.residuoGradienteDilatacion(salidaIntensidad, 3);
-        Mat salidaBinarizacionPreproceso = procesarBinarizacion.adaptativa(salidaPreproceso, 7, 7);
+//        Mat salidaPreproceso = procesarLocal.residuoGradienteDilatacion(salidaIntensidad, 3);
+//        Mat salidaBinarizacionPreproceso = procesarBinarizacion.adaptativa(salidaPreproceso, 7, 7);
+        Mat salidaPreproceso = procesarLocal.filtroSobelGreen(entrada);
+        Mat salidaBinarizacionPreproceso = procesarBinarizacion.media(salidaPreproceso, 20);
         localizarCirculos(salidaBinarizacionPreproceso, rectCirculos);
 
 //        if (salidaBinarizacionPreproceso.channels() > 1)
-        salida = entrada.clone();
+//        salida = entrada.clone();
 //        else {
-//        salida = new Mat();
-//        Imgproc.cvtColor(salidaBinarizacionPreproceso, salida, Imgproc.COLOR_GRAY2RGBA);
+        salida = new Mat();
+        Imgproc.cvtColor(salidaBinarizacionPreproceso, salida, Imgproc.COLOR_GRAY2RGBA);
 //        }
         for (Rect rectCirculo : rectCirculos) {
             // Dibuja los circulos encontrados en rojo
             dibujaCirculosEncontratos(salida, rectCirculo);
+
 
             Mat circulo = entrada.submat(rectCirculo);
             List<Rect> rectDigits = new ArrayList<>();
@@ -367,12 +380,7 @@ public class Procesador {
                 }
 
                 if (!velocidadStr.isEmpty()) {
-                    if (Arrays.binarySearch(velocidadesEspanya, velocidadStr, new Comparator<String>() {
-                        @Override
-                        public int compare(String s, String t1) {
-                            return s.compareTo(t1);
-                        }
-                    }) >= 0) {
+                    if (Arrays.binarySearch(velocidadesEspanya, velocidadStr, comparatorStr) >= 0) {
                         dibujarResultado(salida, rectCirculo, velocidadStr);
                         salidaNumeroAltavoz(velocidadStr);
                     }
@@ -545,19 +553,19 @@ public class Procesador {
                     //return rect2.x - rect1.x;
                 }
             });
-            // El último  y el primer digito tiene que estar pegado al  borde derecho
-            Rect rectP = rectDigits.get(rectDigits.size() - 1);
-            float wC = rectCirculo.width;
-            float wD = rectCirculo.width - (rectP.width + rectP.x);
-            float maxRatioU = wC / wD;
-            // El último  y el primer digito tiene que estar pegado al  borde derecho
-            Rect rectU = rectDigits.get(0);
-            wD = rectU.x;
-            float maxRatioP = wC / wD;
-                if (maxRatioP < 3.5f || maxRatioU < 3.5f) {
-                rectDigits.clear();
-                return;
-            }
+//            // El último  y el primer digito tiene que estar pegado al  borde derecho
+//            Rect rectP = rectDigits.get(rectDigits.size() - 1);
+//            float wC = rectCirculo.width;
+//            float wD = rectCirculo.width - (rectP.width + rectP.x);
+//            float maxRatioU = wC / wD;
+//            // El último  y el primer digito tiene que estar pegado al  borde derecho
+//            Rect rectU = rectDigits.get(0);
+//            wD = rectU.x;
+//            float maxRatioP = wC / wD;
+//                if (maxRatioP < 3.5f || maxRatioU < 3.5f) {
+//                rectDigits.clear();
+//                return;
+//            }
             // Añade a la coordenada X la posición del Círculo para que sean coordenadas absolutas
             for (Rect rectDigit : rectDigits) {
                 rectDigit.x += rectCirculo.x;
@@ -592,13 +600,10 @@ public class Procesador {
                     // A es mucho más grande que B. Se queda B
                     return;
                 } else {
-                    // B es mucho más pequeño que A
-                    // Se borra B y se inserta A
+                    // B es mucho más pequeño que A. Se borra B y se inserta A
                     circulosSalida.remove(circuloB);
                     j--;
-//                    circulosSalida.add(new Rect(P1A, P2A));
                 }
-
             } else {
                 // circuloA candidato
                 if (circuloB.contains(P1A) && circuloB.contains(P2A)) {
@@ -606,13 +611,10 @@ public class Procesador {
                     if (relacionB < 2) {
                         circulosSalida.remove(circuloB);
                         j--;
-//                        circulosSalida.add(new Rect(P1A, P2A));
                     } else {
-                        // A es mucho más pequeño que B
-                        // No se inserta A
+                        // A es mucho más pequeño que B. No se inserta A
                         return;
                     }
-
                 }
             }
         }
@@ -677,7 +679,7 @@ public class Procesador {
     }
 
     // Velocidades En España Ordenadas en binario
-    private final String[] velocidadesEspanya = {"10", "100", "110", "120", "20", "30", "40", "50", "60", "70", "80", "90"};
+    private final String[] velocidadesEspanya = {"10", "20", "30", "40", "50", "60", "70", "80", "90", "100", "110", "120"};
 
 
     // Calcula la relacion entre la distancia mínima y maxima del centro para descartar triángulos y otras figuras geométrica
@@ -715,56 +717,40 @@ public class Procesador {
         r.release();
         return dst;
     }
-//
-//    private boolean velocidadPosible(String salida) {
-//
-//        try {
-//
-//            if (salida.startsWith("0"))
-//                return false;
-//
-//            int numeroReconocido = Integer.parseInt(salida);
-//
-//            for (int auxNumero : velocidadesEspanya
-//                    ) {
-//                if (auxNumero == numeroReconocido)
-//                    return true;
-//
-//            }
-//            return false;
-//        } catch (Exception ex) {
-//            return false;
-//        }
-//    }
-
 
     private TextToSpeech tts;
 
     public void inicializaVoz(Context context) {
-        tts = new TextToSpeech(context,
-                new TextToSpeech.OnInitListener() {
-                    @Override
-                    public void onInit(int status) {
-
-                        if (status == TextToSpeech.SUCCESS) {
-                            String languageToLoad = "es"; // your language
-                            Locale locale = new Locale(languageToLoad);
-                            int result = tts.setLanguage(locale);
-
-                            if (result == TextToSpeech.LANG_MISSING_DATA ||
-                                    result == TextToSpeech.LANG_NOT_SUPPORTED) {
-
-                            } else {
-                                tts.setPitch(1.3f);
-                                tts.setSpeechRate(1f);
-                                //////////Log.d("INICIALIZADO", "INICIALIZADO");
-                            }
-                        }
+        tts = new TextToSpeech(context, new TextToSpeech.OnInitListener() {
+            @Override
+            public void onInit(int status) {
+                if (status == TextToSpeech.SUCCESS) {
+                    String languageToLoad = "es"; /* your language*/
+                    Locale locale = new Locale(languageToLoad);
+                    int result = tts.setLanguage(locale);
+                    if (result == TextToSpeech.LANG_MISSING_DATA || result == TextToSpeech.LANG_NOT_SUPPORTED) {
+                    } else {
+                        tts.setPitch(1.3f);
+                        tts.setSpeechRate(1f);
                     }
-                });
-
+                }
+            }
+        });
     }
 
+    private void salidaNumeroAltavoz(String velocidad) {
+        //////////Log.d("LAMADA", "VOZ");
+        if (velocidad.length() > 0) {
+            if (!tts.isSpeaking()) {
+
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                    tts.speak(velocidad, TextToSpeech.QUEUE_FLUSH, null, null);
+                } else {
+                    tts.speak(velocidad, TextToSpeech.QUEUE_FLUSH, null);
+                }
+            }
+        }
+    }
 
 //    ////////////////////////////////////////////////////////////////////////////////////////////////////
 //    // MODULO DE ESTABLIDAD
@@ -806,18 +792,5 @@ public class Procesador {
 //        }
 //    }
 
-    private void salidaNumeroAltavoz(String velocidad) {
-        //////////Log.d("LAMADA", "VOZ");
-        if (velocidad.length() > 0) {
-            if (!tts.isSpeaking()) {
-
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                    tts.speak(velocidad, TextToSpeech.QUEUE_FLUSH, null, null);
-                } else {
-                    tts.speak(velocidad, TextToSpeech.QUEUE_FLUSH, null);
-                }
-            }
-        }
-    }
 
 }
