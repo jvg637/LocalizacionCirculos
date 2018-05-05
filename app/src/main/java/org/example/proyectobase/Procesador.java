@@ -235,18 +235,17 @@ public class Procesador {
      * @param entrada
      * @return
      */
-    public String leerDigitoOcr(Mat entrada) {
+    public int leerDigitoOcr(Mat entrada) {
         entrada_gris = procesadorIntensidad.toGray(entrada);
 //Binarizacion Otsu
         binaria1 = procesarBinarizacion.otsuInversa(entrada_gris);
 //Leer numero
-        String digito = String.valueOf(leerRectangulo(binaria1));
+        int digito = leerRectangulo(binaria1);
 
         entrada_gris.release();
         binaria1.release();
         return digito;
     }
-
 
 
     public int leerRectangulo(Mat rectangulo) {
@@ -267,7 +266,10 @@ public class Procesador {
                 nmin = n;
             }
         }
-//        if (Math.abs(dmin) < 0.8)
+
+//        Log.d("DMIN", "dmin=" + dmin);
+//        // Si no hay una exactitud grande. Se rechaza la lectura
+//        if (Math.abs(dmin) < 0.95)
 //            nmin = -1;
 //        else
         nmin = nmin % 10; // A partir de la fila determinamos el numero
@@ -349,14 +351,32 @@ public class Procesador {
             dibujaDigitosEncontrados(salida, rectDigits);
 
             // Si tengo 2 o 3 digitos, les aplico OCR
-            String numero = "";
+            String velocidadStr = "";
             if (rectDigits.size() >= 2 && rectDigits.size() <= 3) {
                 for (Rect rectDigito : rectDigits) {
-
                     Mat digito = entrada.submat(rectDigito);
-                    numero += leerDigitoOcr(digito);
+
+                    int velocidad = leerDigitoOcr(digito);
+                    if (velocidad != -1) {
+                        velocidadStr += velocidad;
+                    } else {
+                        // Velocidad incorrecta
+                        velocidadStr = "";
+                        break;
+                    }
                 }
-                dibujarResultado(salida, rectCirculo, numero);
+
+                if (!velocidadStr.isEmpty()) {
+                    if (Arrays.binarySearch(velocidadesEspanya, velocidadStr, new Comparator<String>() {
+                        @Override
+                        public int compare(String s, String t1) {
+                            return s.compareTo(t1);
+                        }
+                    }) >= 0) {
+                        dibujarResultado(salida, rectCirculo, velocidadStr);
+                        salidaNumeroAltavoz(velocidadStr);
+                    }
+                }
             }
         }
 
@@ -466,7 +486,6 @@ public class Procesador {
                 Imgproc.CHAIN_APPROX_NONE);
 //        int minimumHeight = 12;
         int minimumHeight = 8;
-        float maxratio = (float) 0.33;
 
         // Seleccionar candidatos a circulos
         for (int c = 0; c < blobs.size(); c++) {
@@ -515,25 +534,38 @@ public class Procesador {
         binaria.release();
         paNeg.release();
 
-
-        // Ordena las colecciones por posición
-        Collections.sort(rectDigits, new Comparator<Rect>() {
-            @Override
-            public int compare(Rect rect1, Rect rect2) {
-                //ascending order
-                return rect1.x - rect2.x;
-                //descending order
-                //return rect2.x - rect1.x;
+        if (rectDigits.size() >= 2 && rectDigits.size() <= 3) {
+            // Ordena las colecciones por posición
+            Collections.sort(rectDigits, new Comparator<Rect>() {
+                @Override
+                public int compare(Rect rect1, Rect rect2) {
+                    //ascending order
+                    return rect1.x - rect2.x;
+                    //descending order
+                    //return rect2.x - rect1.x;
+                }
+            });
+            // El último  y el primer digito tiene que estar pegado al  borde derecho
+            Rect rectP = rectDigits.get(rectDigits.size() - 1);
+            float wC = rectCirculo.width;
+            float wD = rectCirculo.width - (rectP.width + rectP.x);
+            float maxRatioU = wC / wD;
+            // El último  y el primer digito tiene que estar pegado al  borde derecho
+            Rect rectU = rectDigits.get(0);
+            wD = rectU.x;
+            float maxRatioP = wC / wD;
+                if (maxRatioP < 3.5f || maxRatioU < 3.5f) {
+                rectDigits.clear();
+                return;
             }
-        });
-
-        // Añade a la coordenada X la posición del Círculo para que sean coordenadas absolutas
-        for (Rect rectDigit : rectDigits) {
-            rectDigit.x += rectCirculo.x;
-            rectDigit.y += rectCirculo.y;
+            // Añade a la coordenada X la posición del Círculo para que sean coordenadas absolutas
+            for (Rect rectDigit : rectDigits) {
+                rectDigit.x += rectCirculo.x;
+                rectDigit.y += rectCirculo.y;
+            }
+        } else {
+            rectDigits.clear();
         }
-
-        return;
     }
 
     /**
@@ -644,83 +676,66 @@ public class Procesador {
         entrada_mitad_izquierda.copyTo(salida_mitad_izquierda);
     }
 
-    int[] velocidadesEspanya = {10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120};
+    // Velocidades En España Ordenadas en binario
+    private final String[] velocidadesEspanya = {"10", "100", "110", "120", "20", "30", "40", "50", "60", "70", "80", "90"};
 
 
     // Calcula la relacion entre la distancia mínima y maxima del centro para descartar triángulos y otras figuras geométrica
     private double minMaxDistanceRatio(MatOfPoint curr_blob) {
         Point Sum = new Point(0.0, 0.0);
-
         // Compute the center of gravity of ponts of contour
         Size sizeA = curr_blob.size();
-
         for (int i = 0; i < sizeA.height; i++)
             for (int j = 0; j < sizeA.width; j++) {
                 double[] pp = curr_blob.get(i, j);
                 Sum.x = Sum.x + pp[0];
                 Sum.y = Sum.y + pp[1];
-
             }
         double number_of_contour_ponts = sizeA.width * sizeA.height;
-
         Sum.x /= number_of_contour_ponts;
         Sum.y /= number_of_contour_ponts;
-
-
         Point center = Sum;
-
         double minima = Double.MAX_VALUE;
         double maxima = Double.MIN_VALUE;
-
-
         for (int i = 0; i < sizeA.height; i++)
             for (int j = 0; j < sizeA.width; j++) {
                 double[] pp = curr_blob.get(i, j);
-
                 double distancia = Math.sqrt(Math.pow(pp[0] - center.x, 2) + Math.pow(pp[1] - center.y, 2));
-
                 minima = (distancia < minima) ? distancia : minima;
                 maxima = (distancia > maxima) ? distancia : maxima;
             }
-
         return maxima / minima;
     }
 
     Mat rotate(Mat src, int angle) {
-
-
         Mat dst = new Mat();
         Point pt = new Point(src.width() / 2.0, src.height() / 2.0);
-
         Mat r = Imgproc.getRotationMatrix2D(pt, (angle != -1) ? angle : 0, 1.0);
-
         Imgproc.warpAffine(src, dst, r, new Size(src.width(), src.height()));
-
         r.release();
-
         return dst;
     }
-
-    private boolean velocidadPosible(String salida) {
-
-        try {
-
-            if (salida.startsWith("0"))
-                return false;
-
-            int numeroReconocido = Integer.parseInt(salida);
-
-            for (int auxNumero : velocidadesEspanya
-                    ) {
-                if (auxNumero == numeroReconocido)
-                    return true;
-
-            }
-            return false;
-        } catch (Exception ex) {
-            return false;
-        }
-    }
+//
+//    private boolean velocidadPosible(String salida) {
+//
+//        try {
+//
+//            if (salida.startsWith("0"))
+//                return false;
+//
+//            int numeroReconocido = Integer.parseInt(salida);
+//
+//            for (int auxNumero : velocidadesEspanya
+//                    ) {
+//                if (auxNumero == numeroReconocido)
+//                    return true;
+//
+//            }
+//            return false;
+//        } catch (Exception ex) {
+//            return false;
+//        }
+//    }
 
 
     private TextToSpeech tts;
@@ -750,15 +765,56 @@ public class Procesador {
 
     }
 
-    private void salidaNumeroAltavoz(int numero) {
+
+//    ////////////////////////////////////////////////////////////////////////////////////////////////////
+//    // MODULO DE ESTABLIDAD
+//    ////////////////////////////////////////////////////////////////////////////////////////////////////
+//    private void moduloVisulizacionVelocidad(Mat entrada, ArrayList<Rect> rectCirculos, int tamanyoMax, int posTamanyoMax, int velocidadTamanyoMax, int posVelocidadMin, int velocidadMin) {
+//        int velocidad = (tipoPrioridad == TipoPrioridad.VELOCIDAD) ? velocidadMin : velocidadTamanyoMax;
+//
+//        if (posTamanyoMax != -1) {
+//            if (lecturaVelocidadAnterior != velocidad) {
+//                lecturaVelocidadAnterior = velocidad;
+//                numeroVecesLeida = 1;
+//            } else {
+//                numeroVecesLeida++;
+//            }
+//            //////////Log.d("LECTURAS_OK", "" + numeroVecesLeida);
+//        } else {
+//            reiniciaContadorLecturasEstabilizacion();
+//        }
+//
+//        /*for (Rect rectCirculo : rectCirculos) {
+//            Imgproc.rectangle
+//                    (entrada, new Point(rectCirculo.x, rectCirculo.y),
+//                            new Point(rectCirculo.width + rectCirculo.x - 1, rectCirculo.height + rectCirculo.y - 1), new Scalar(255, 0, 0));
+//
+//        }*/
+//
+//
+//        // Estabiliza la lectura
+//        if (numeroVecesLeida >= estabilizacion && posTamanyoMax >= 0) {
+//            //////////Log.d("LECTURAS_OK", "VELOCIDAD MAX: " + numeroVecesLeida + " " + velocidad + " TAMAÑO MAX: " + tamanyoMax);
+//            if (tipoPrioridad == TipoPrioridad.VELOCIDAD) {
+//                dibujarResultado(entrada, rectCirculos.get(posVelocidadMin), String.valueOf(velocidad));
+//            } else {
+//                dibujarResultado(entrada, rectCirculos.get(posTamanyoMax), String.valueOf(velocidad));
+//            }
+//
+//            if (numeroVecesLeida == estabilizacion)
+//                salidaNumeroAltavoz(velocidad);
+//        }
+//    }
+
+    private void salidaNumeroAltavoz(String velocidad) {
         //////////Log.d("LAMADA", "VOZ");
-        if (numero > 0) {
+        if (velocidad.length() > 0) {
             if (!tts.isSpeaking()) {
-                String st = String.valueOf(numero);
+
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                    tts.speak(st, TextToSpeech.QUEUE_FLUSH, null, null);
+                    tts.speak(velocidad, TextToSpeech.QUEUE_FLUSH, null, null);
                 } else {
-                    tts.speak(st, TextToSpeech.QUEUE_FLUSH, null);
+                    tts.speak(velocidad, TextToSpeech.QUEUE_FLUSH, null);
                 }
             }
         }
