@@ -1,5 +1,7 @@
 package org.example.proyectobase;
 
+import android.util.Log;
+
 import org.opencv.core.Core;
 import org.opencv.core.Mat;
 import org.opencv.core.Scalar;
@@ -98,8 +100,6 @@ public class ProcesadorBinarizacion {
                 Imgproc.ADAPTIVE_THRESH_MEAN_C,
                 Imgproc.THRESH_BINARY,
                 tamano, -contraste);
-
-
         return salida;
 
     }
@@ -113,15 +113,52 @@ public class ProcesadorBinarizacion {
 //        Imgproc.Canny(entrada, salida, 75, 200);
         return salida;
     }
-    public Mat media(Mat entrada, int margen) {
+
+    public Mat mediaPorFactor(Mat entrada, double factor) {
         Mat salida = new Mat();
 
         Scalar mediaMat = Core.mean(entrada);
 //        int avg = (int) ((mediaMat.val)[0] + 20);
-        int avg = (int) ((mediaMat.val)[0] *1.8d);
+        int avg = (int) ((mediaMat.val)[0] * factor);
         Imgproc.threshold(entrada, salida, avg, 255, Imgproc.THRESH_BINARY);
 
 
+        return salida;
+    }
+
+    public Mat mediaMasEscalar(Mat entrada, double escalar) {
+        Mat salida = new Mat();
+
+        Scalar mediaMat = Core.mean(entrada);
+        int avg = (int) ((mediaMat.val)[0] + escalar);
+        Imgproc.threshold(entrada, salida, avg, 255, Imgproc.THRESH_BINARY);
+
+
+        return salida;
+    }
+
+    public Mat binarizacionPreproceso(Procesador.TipoBinarizacion tipoBinarizacionPreProceso, Mat salidaPreproceso) {
+        Mat salida;
+        switch (tipoBinarizacionPreProceso) {
+            case SIN_PROCESO:
+                salida = salidaPreproceso.clone();
+                break;
+            case OTSU_INV:
+                salida = otsuInversa(salidaPreproceso);
+                break;
+            case MAXIMO:
+                salida = maxDivided4(salidaPreproceso);
+                break;
+            case MEDIA:
+                salida = mediaPorFactor(salidaPreproceso, 1.8d);
+                break;
+            case ADAPTATIVA:
+                salida = adaptativa(salidaPreproceso, 7,7);
+                break;
+            default:
+                salida = salidaPreproceso.clone();
+                Log.d("BINPREPROCESO", "Opción no implementada:" + tipoBinarizacionPreProceso.name());
+        }
         return salida;
     }
 }

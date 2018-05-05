@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+    <PreferenceCategory android:title="Ajustes básicos">
+        <!--CheckBoxPreference
+            android:defaultValue="false"
+            android:key="pantalla_partida"
+            android:summary="Muestra a la izquierda la entrada y a la derecha la salida"
+            android:title="Pantalla partida" /-->
+        <CheckBoxPreference
+            android:defaultValue="true"
+            android:key="zoom"
+            android:summary="Muestra un recudro de la zona analizada"
+            android:title="Modo ZOOM" />
+        <ListPreference
+            android:defaultValue="2"
+            android:key="estabilidad"
+            android:entries="@array/numeroLecturas"
+            android:entryValues="@array/numeroLecturas"
+            android:summary="Nº Lecturas Correctas para informar velocidad"
+            android:title="Nº Lecturas" />
+
+        <ListPreference
+            android:defaultValue="TAMANYO"
+            android:entries="@array/prioridadDeteccion"
+            android:entryValues="@array/valorPrioridadDeteccion"
+            android:key="prioridad_deteccion"
+            android:summary="Prioriza la señal detectada"
+            android:title="Prioridad de Detección" />
+
+        <ListPreference
+            android:defaultValue="RECONOCIMIENTO"
+            android:entries="@array/tipoSalida"
+            android:entryValues="@array/valorSalida"
+            android:key="salida"
+            android:summary="Muestra el proceso hasta la fase indicada"
+            android:title="Salida a Mostrar" />
+
+        <ListPreference
+            android:defaultValue="SIN_PROCESO"
+            android:entries="@array/tipoIntensidad"
+            android:entryValues="@array/valorIntensidad"
+            android:key="intensidad"
+            android:summary="Obtiene imagen de grises mejorando distribución in-tensidades"
+            android:title="Transformación Intensidad" />
+    </PreferenceCategory>
+    <PreferenceCategory android:title="Configurar Fases del proceso">
+        <ListPreference
+            android:defaultValue="GRADIENTE_MORFOLOGICO_DILATACION"
+            android:entries="@array/tipoPreProceso"
+            android:entryValues="@array/valorPreproceso"
+            android:key="preproceso"
+            android:summary="Aplica preproceso indicado"
+            android:title="Preproceso" />
+        <ListPreference
+            android:defaultValue="ADAPTATIVA"
+            android:entries="@array/tipoBinarizacionPreproceso"
+            android:entryValues="@array/valorBinarizacionPreproceso"
+            android:key="binarizacion_preproceso"
+            android:summary="Obtiene una imagen binaria a partir del preproceso"
+            android:title="Binarización Pre-Preproceso" />
+        <ListPreference
+            android:defaultValue="COMPONENTE_ROJA"
+            android:entries="@array/tipoSegmentacion"
+            android:entryValues="@array/valorSegmentacion"
+            android:key="segmentacion_disco"
+            android:summary="Localiza objetos en la imagen"
+            android:title="Segmentación Disco" />
+        <ListPreference
+            android:defaultValue="OTSU_INV"
+            android:entries="@array/tipoBinarizacionSegmentacion"
+            android:entryValues="@array/valorBinarizacionSegmentacion"
+            android:key="binarizacion_segmentacion_disco"
+            android:summary="Binarización de la Segmentación del Disco"
+            android:title="Binarización Segmentación Disco" />
+    </PreferenceCategory>
+</PreferenceScreen>

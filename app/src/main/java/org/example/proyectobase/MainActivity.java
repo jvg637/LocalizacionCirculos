@@ -1,12 +1,16 @@
 package org.example.proyectobase;
 
 import android.Manifest;
+import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.hardware.Camera;
 import android.os.Bundle;
 import android.os.Environment;
+import android.preference.PreferenceManager;
+import android.speech.tts.TextToSpeech;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
@@ -19,6 +23,7 @@ import android.view.SubMenu;
 import android.view.WindowManager;
 import android.widget.Toast;
 
+import org.example.proyectobase.utils.TextSpeechVelocity;
 import org.opencv.android.CameraBridgeViewBase;
 import org.opencv.android.InstallCallbackInterface;
 import org.opencv.android.LoaderCallbackInterface;
@@ -44,8 +49,8 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
 
 
     private int indiceCamara; // 0-> camara trasera; 1-> camara frontal
-    private int cam_anchura = 320;// resolucion deseada de la imagen
-    private int cam_altura = 240;
+    private int cam_anchura = 800;// resolucion deseada de la imagen
+    private int cam_altura = 600;
     private static final String STATE_CAMERA_INDEX = "cameraIndex";
 
 
@@ -164,9 +169,44 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
         cam_altura = height; //Estas son las que se usan de verdad
         cam_anchura = width;
 
-        procesador = new Procesador();
-        // Lector de texto
-        procesador.inicializaVoz(getBaseContext());
+        procesador = new Procesador(this);
+
+        PreferenceManager.setDefaultValues(this, R.xml.preferencias, false);
+        SharedPreferences preferencias = PreferenceManager.getDefaultSharedPreferences(this);
+
+        ////pantallaPartida = (preferencias.getBoolean("pantalla_partida", false));
+
+//        String valor = preferencias.getString("salida", Procesador.Salida.BINARIZACION_PREPROCESO.name());
+//        procesador.setMostrarSalida(Procesador.Salida.valueOf(valor));
+//
+//        valor = preferencias.getString("intensidad", Procesador.TipoIntensidad.AUMENTO_LINEAL_CONTRASTE.name());
+//        procesador.setTipoIntensidad(Procesador.TipoIntensidad.valueOf(valor));
+
+        String valor = preferencias.getString("preproceso", Procesador.TipoPreproceso.GRADIENTE_MORFOLOGICO_DILATACION.name());
+        procesador.setTipoPreProceso(Procesador.TipoPreproceso.valueOf(valor));
+
+        valor = preferencias.getString("binarizacion_preproceso", Procesador.TipoBinarizacion.ADAPTATIVA.name());
+        procesador.setTipoBinarizacionPreProceso(Procesador.TipoBinarizacion.valueOf(valor));
+
+        valor = preferencias.getString("segmentacion_disco", Procesador.TipoSegmentacionCirculo.COMPONENTE_ROJA.name());
+        procesador.setTipoSegmentacionCirculo(Procesador.TipoSegmentacionCirculo.valueOf(valor));
+
+        valor = preferencias.getString("binarizacion_segmentacion_disco", Procesador.TipoBinarizacion.OTSU_INV.name());
+        procesador.setTipoBinarizacionDisco(Procesador.TipoBinarizacion.valueOf(valor));
+//
+//        valor = preferencias.getString("reconocimiento", Procesador.TipoReconocimiento.OTSU.name());
+//        procesador.setTipoReconocimiento(Procesador.TipoReconocimiento.valueOf(valor));
+//
+//
+//        valor = preferencias.getString("prioridad_deteccion", Procesador.TipoPrioridad.VELOCIDAD.name());
+//        procesador.setTipoPrioridad(Procesador.TipoPrioridad.valueOf(valor));
+//
+        valor = preferencias.getString("estabilidad", "2");
+        procesador.setEstabilizacion(Integer.parseInt(valor));
+//
+        boolean valorBoleean = preferencias.getBoolean("zoom", false);
+        procesador.setZoom(valorBoleean);
+
 
     }
 
@@ -210,7 +250,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
 
 
             }
-            if (!imagenColor && imagenRecurso_.channels()>1) {
+            if (!imagenColor && imagenRecurso_.channels() > 1) {
                 Imgproc.cvtColor(imagenRecurso_, imagenRecurso_, Imgproc.COLOR_RGBA2GRAY);
             }
             entrada = imagenRecurso_;
@@ -350,6 +390,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
         super.onDestroy();
         if (cameraView != null)
             cameraView.disableView();
+
     }
 
 
@@ -403,16 +444,16 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
             case R.id.guardar_imagenes:
                 guardarSiguienteImagen = true;
                 break;
-            case R.id.entrada_imagen_color:
-                if (item.isChecked()) {
-                    imagenColor = false;
-                    item.setChecked(false);
-                } else {
-                    imagenColor = true;
-                    item.setChecked(true);
-                }
-                recargarRecurso = true;
-                break;
+//            case R.id.entrada_imagen_color:
+//                if (item.isChecked()) {
+//                    imagenColor = false;
+//                    item.setChecked(false);
+//                } else {
+//                    imagenColor = true;
+//                    item.setChecked(true);
+//                }
+//                recargarRecurso = true;
+//                break;
             case R.id.dividir_pantalla:
                 if (item.isChecked()) {
                     dividirImagen = false;
@@ -430,6 +471,10 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
                     aumentoLineal = true;
                     item.setChecked(true);
                 }
+                break;
+            case R.id.preferencias:
+                Intent i = new Intent(this, Preferencias.class);
+                startActivity(i);
                 break;
             default:
                 String titulo = item.getTitle().toString();
@@ -472,4 +517,5 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
 //                return super.onContextItemSelected(item);
 //        }
 //    }
+
 }

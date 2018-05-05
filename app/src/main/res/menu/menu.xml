@@ -37,13 +37,22 @@
         android:icon="@android:drawable/ic_menu_gallery"
         android:title=" Guardar imagenes ">
     </item>
-    <item
-        android:id="@+id/entrada_imagen_color"
-        app:actionViewClass="android.widget.CheckBox"
-        android:checkable="true"
-        android:checked="true"
-        android:title=" Entrada Color "
-        />
+
+    <ListPreference
+        android:defaultValue="2"
+        android:key="estabilidad"
+        android:entries="@array/numeroLecturas"
+        android:entryValues="@array/numeroLecturas"
+        android:summary="Nº Lecturas Correctas para informar velocidad"
+        android:title="Nº Lecturas" />
+
+    <ListPreference
+        android:defaultValue="TAMANYO"
+        android:entries="@array/prioridadDeteccion"
+        android:entryValues="@array/valorPrioridadDeteccion"
+        android:key="prioridad_deteccion"
+        android:summary="Prioriza la señal detectada"
+        android:title="Prioridad de Detección" />
     <item
         android:id="@+id/dividir_pantalla"
         app:actionViewClass="android.widget.CheckBox"
@@ -59,5 +68,8 @@
         android:checked="false"
         android:title=" Aumento Lineal "
         />
-
+    <item
+        android:id="@+id/preferencias"
+        android:icon="@android:drawable/ic_menu_preferences"
+        android:title="Preferencias" />
 </menu>

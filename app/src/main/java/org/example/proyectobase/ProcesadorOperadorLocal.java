@@ -64,7 +64,7 @@ public class ProcesadorOperadorLocal {
     }
 
 
-    public Mat filtroPAPosGaussiono(Mat entrada) {
+    public Mat filtroPANegGaussiono(Mat entrada) {
 
         if (entrada.channels() > 1) {
             return entrada.clone();
@@ -221,15 +221,12 @@ public class ProcesadorOperadorLocal {
 
 
     public Mat residuoGradienteDilatacion(Mat entrada, double tam) {
-
         if (entrada.channels() > 1) {
             return entrada.clone();
         }
 
 //        double tam = 3;
 //        double tam = 11;
-
-
         Mat salida = new Mat();
 
         Mat SE = Imgproc.getStructuringElement(Imgproc.MORPH_RECT, new Size(tam,tam));

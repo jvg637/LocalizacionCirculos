@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="tipoSalida">
+        <item>Entrada</item>
+        <item>Preproceso</item>
+        <item>Binarizacion Preproceso</item>
+        <item>Localizacion Círculos</item>
+        <item>Segmentación Círculo</item>
+        <item>Reconocimiento</item>
+    </string-array>
+    <string-array name="valorSalida">
+        <item>ENTRADA</item>
+        <item>PREPROCESO</item>
+        <item>BINARIZACION_PREPROCESO</item>
+        <item>LOCALIZACION_CIRCULOS</item>
+        <item>SEGMENTACION_CIRCULO</item>
+        <item>RECONOCIMIENTO</item>
+    </string-array>
+    <string-array name="tipoIntensidad">
+        <item>Sin proceso</item>
+        <item>Aumento lineal contraste</item>
+        <item>Ecualización de histograma</item>
+    </string-array>
+    <string-array name="valorIntensidad">
+        <item>SIN_PROCESO</item>
+        <item>AUMENTO_LINEAL_CONTRASTE</item>
+        <item>EQUALIZ_HISTOGRAMA</item>
+    </string-array>
+    <string-array name="tipoPreProceso">
+        <item>SIN PROCESO</item>
+        <item>ZONAS ROJAS</item>
+        <item>FILTRO PASO ALTO -</item>
+        <item>FILTRO PASO ALTO - (GAUSSIANO)</item>
+        <item>RESIDUO GRADIENTE MORFOLOGICO DILATACIÓN</item>
+        <item>SOBEL LUMINANCIA</item>
+        <item>SOBEL RED</item>
+        <item>SOBEL GREEN</item>
+    </string-array>
+    <string-array name="valorPreproceso">
+        <item>SIN_PROCESO</item>
+        <item>ZONAS_ROJAS</item>
+        <item>FILTRO_PASO_ALTO_NEG</item>
+        <item>FILTRO_PASO_ALTO_NEG_GAUSSIANO</item>
+        <item>GRADIENTE_MORFOLOGICO_DILATACION</item>
+        <item>SOBEL_LUMINANCIA</item>
+        <item>SOBEL_RED</item>
+        <item>SOBEL_GREEN</item>
+    </string-array>
+    <string-array name="tipoBinarizacionPreproceso">
+        <item>SIN PROCESO</item>
+        <item>ADAPTATIVA</item>
+        <item>MEDIA</item>
+        <item>MAXIMO</item>
+    </string-array>
+    <string-array name="valorBinarizacionPreproceso">
+        <item>SIN_PROCESO</item>
+        <item>ADAPTATIVA</item>
+        <item>MEDIA</item>
+        <item>MAXIMO</item>
+    </string-array>
+
+    <string-array name="tipoSegmentacion">
+        <item>SIN PROCESO</item>
+        <item>Componente Roja</item>
+        <item>Filtro Paso Alto Neg</item>
+    </string-array>
+    <string-array name="valorSegmentacion">
+        <item>SIN_PROCESO</item>
+        <item>COMPONENTE_ROJA</item>
+        <item>FILTRO_PASO_ALTO_NEG</item>
+    </string-array>
+
+    <string-array name="tipoBinarizacionSegmentacion">
+        <item>OTSU INVERSA</item>
+    </string-array>
+    <string-array name="valorBinarizacionSegmentacion">
+        <item>OTSU_INV</item>
+    </string-array>
+
+
+    <string-array name="valorPrioridadDeteccion">
+        <item>VELOCIDAD</item>
+        <item>TAMANYO</item>
+    </string-array>
+    <string-array name="prioridadDeteccion">
+        <item>Menor velocidad</item>
+        <item>Mayor tamaño</item>
+    </string-array>
+
+    <string-array name="numeroLecturas">
+        <item>1</item>
+        <item>2</item>
+        <item>3</item>
+        <item>4</item>
+        <item>5</item>
+        <item>6</item>
+        <item>7</item>
+        <item>8</item>
+        <item>9</item>
+        <item>10</item>
+    </string-array>
+
+</resources>
