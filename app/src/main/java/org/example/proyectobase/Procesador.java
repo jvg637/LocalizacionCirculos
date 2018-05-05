@@ -1,5 +1,8 @@
 package org.example.proyectobase;
 
+import android.content.Context;
+import android.os.Build;
+import android.speech.tts.TextToSpeech;
 import android.util.Log;
 
 import org.opencv.core.Core;
@@ -14,7 +17,11 @@ import org.opencv.imgproc.Imgproc;
 
 import java.net.BindException;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Locale;
 
 import static org.example.proyectobase.MainActivity.aumentoLineal;
 
@@ -238,47 +245,9 @@ public class Procesador {
         entrada_gris.release();
         binaria1.release();
         return digito;
-
     }
 
-//    boolean localizarCaracter(Rect digit_rect) {
-//        int contraste = 5;
-//        int tamano = 7;
-//        Imgproc.adaptiveThreshold(entrada_gris, binaria1, 255,
-//                Imgproc.ADAPTIVE_THRESH_MEAN_C, Imgproc.THRESH_BINARY_INV,
-//                tamano, contraste);
-//        List<MatOfPoint> contornos = new ArrayList<MatOfPoint>();
-//        Mat jerarquia = new Mat();
-//        Imgproc.findContours(binaria1, contornos, jerarquia,
-//                Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_NONE);
-//        int altura_minima = 30;
-//        int anchura_minima = 10;
-//        int max_area = -1;
-//// Seleccionar objeto mas grande
-//        for (int c = 0; c < contornos.size(); c++) {
-//            Rect bb = Imgproc.boundingRect(contornos.get(c));
-//// Comprobar tamaño
-//            if (bb.width < anchura_minima || bb.height < altura_minima)
-//                continue;
-//// Descartar proximos al borde
-//            if (bb.x < 2 || bb.y < 2)
-//                continue;
-//            if (binaria1.width() - (bb.x + bb.width) < 3 || binaria1.height() -
-//                    (bb.y + bb.width) < 3)
-//                continue;
-//// Seleccionar el mayor
-//            int area = bb.width * bb.height;
-//            if (area > max_area) {
-//                max_area = area;
-//                digit_rect.x = bb.x;
-//                digit_rect.y = bb.y;
-//                digit_rect.width = bb.width;
-//                digit_rect.height = bb.height;
-//            }
-//        }
-//        if (max_area < 0) return false; //No se ha detectado objeto valido
-//        else return true;
-//    }
+
 
     public int leerRectangulo(Mat rectangulo) {
         Mat vectorCaracteristicas = caracteristicas(rectangulo);
@@ -348,8 +317,7 @@ public class Procesador {
         // Aumento Lineal Contraste
         Mat salidaIntensidad;
 
-        Mat salidaGris = new Mat();
-        Imgproc.cvtColor(entrada, salidaGris, Imgproc.COLOR_RGBA2GRAY);
+        Mat salidaGris = procesadorIntensidad.toGray(entrada);
         if (aumentoLineal) {
             salidaIntensidad = procesadorIntensidad.aumentoLinealContraste(salidaGris);
         } else {
@@ -362,10 +330,10 @@ public class Procesador {
         localizarCirculos(salidaBinarizacionPreproceso, rectCirculos);
 
 //        if (salidaBinarizacionPreproceso.channels() > 1)
-//        salida = entrada.clone();
+        salida = entrada.clone();
 //        else {
-        salida = new Mat();
-        Imgproc.cvtColor(salidaBinarizacionPreproceso, salida, Imgproc.COLOR_GRAY2RGBA);
+//        salida = new Mat();
+//        Imgproc.cvtColor(salidaBinarizacionPreproceso, salida, Imgproc.COLOR_GRAY2RGBA);
 //        }
         for (Rect rectCirculo : rectCirculos) {
             // Dibuja los circulos encontrados en rojo
@@ -425,6 +393,9 @@ public class Procesador {
 //        int minimumHeight = 30;
         int minimumHeight = 25;
         float maxratio = (float) 0.75;
+        // Relacion circurferencia
+        double maxRatioCircurferencia = 0.75;
+
 
         // Seleccionar candidatos a circulos
         for (int c = 0; c < blobs.size(); c++) {
@@ -448,6 +419,11 @@ public class Procesador {
                 continue;
             if (binaria.width() - (BB.x + BB.width) < 3 || binaria.height() -
                     (BB.y + BB.height) < 3)
+                continue;
+
+            // Comprueba que es un círculo
+            double ratioCircurferencia = Math.abs(minMaxDistanceRatio(blobs.get(c)));
+            if (ratioCircurferencia < maxRatioCircurferencia || ratioCircurferencia > 1.0 / maxRatioCircurferencia)
                 continue;
 
             insertarEliminandoCirculosConcentricos(rectCirculos, BB);
@@ -539,6 +515,19 @@ public class Procesador {
         binaria.release();
         paNeg.release();
 
+
+        // Ordena las colecciones por posición
+        Collections.sort(rectDigits, new Comparator<Rect>() {
+            @Override
+            public int compare(Rect rect1, Rect rect2) {
+                //ascending order
+                return rect1.x - rect2.x;
+                //descending order
+                //return rect2.x - rect1.x;
+            }
+        });
+
+        // Añade a la coordenada X la posición del Círculo para que sean coordenadas absolutas
         for (Rect rectDigit : rectDigits) {
             rectDigit.x += rectCirculo.x;
             rectDigit.y += rectCirculo.y;
@@ -654,4 +643,125 @@ public class Procesador {
         entrada_mitad_izquierda = entrada.submat(mitad_izquierda);
         entrada_mitad_izquierda.copyTo(salida_mitad_izquierda);
     }
+
+    int[] velocidadesEspanya = {10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120};
+
+
+    // Calcula la relacion entre la distancia mínima y maxima del centro para descartar triángulos y otras figuras geométrica
+    private double minMaxDistanceRatio(MatOfPoint curr_blob) {
+        Point Sum = new Point(0.0, 0.0);
+
+        // Compute the center of gravity of ponts of contour
+        Size sizeA = curr_blob.size();
+
+        for (int i = 0; i < sizeA.height; i++)
+            for (int j = 0; j < sizeA.width; j++) {
+                double[] pp = curr_blob.get(i, j);
+                Sum.x = Sum.x + pp[0];
+                Sum.y = Sum.y + pp[1];
+
+            }
+        double number_of_contour_ponts = sizeA.width * sizeA.height;
+
+        Sum.x /= number_of_contour_ponts;
+        Sum.y /= number_of_contour_ponts;
+
+
+        Point center = Sum;
+
+        double minima = Double.MAX_VALUE;
+        double maxima = Double.MIN_VALUE;
+
+
+        for (int i = 0; i < sizeA.height; i++)
+            for (int j = 0; j < sizeA.width; j++) {
+                double[] pp = curr_blob.get(i, j);
+
+                double distancia = Math.sqrt(Math.pow(pp[0] - center.x, 2) + Math.pow(pp[1] - center.y, 2));
+
+                minima = (distancia < minima) ? distancia : minima;
+                maxima = (distancia > maxima) ? distancia : maxima;
+            }
+
+        return maxima / minima;
+    }
+
+    Mat rotate(Mat src, int angle) {
+
+
+        Mat dst = new Mat();
+        Point pt = new Point(src.width() / 2.0, src.height() / 2.0);
+
+        Mat r = Imgproc.getRotationMatrix2D(pt, (angle != -1) ? angle : 0, 1.0);
+
+        Imgproc.warpAffine(src, dst, r, new Size(src.width(), src.height()));
+
+        r.release();
+
+        return dst;
+    }
+
+    private boolean velocidadPosible(String salida) {
+
+        try {
+
+            if (salida.startsWith("0"))
+                return false;
+
+            int numeroReconocido = Integer.parseInt(salida);
+
+            for (int auxNumero : velocidadesEspanya
+                    ) {
+                if (auxNumero == numeroReconocido)
+                    return true;
+
+            }
+            return false;
+        } catch (Exception ex) {
+            return false;
+        }
+    }
+
+
+    private TextToSpeech tts;
+
+    public void inicializaVoz(Context context) {
+        tts = new TextToSpeech(context,
+                new TextToSpeech.OnInitListener() {
+                    @Override
+                    public void onInit(int status) {
+
+                        if (status == TextToSpeech.SUCCESS) {
+                            String languageToLoad = "es"; // your language
+                            Locale locale = new Locale(languageToLoad);
+                            int result = tts.setLanguage(locale);
+
+                            if (result == TextToSpeech.LANG_MISSING_DATA ||
+                                    result == TextToSpeech.LANG_NOT_SUPPORTED) {
+
+                            } else {
+                                tts.setPitch(1.3f);
+                                tts.setSpeechRate(1f);
+                                //////////Log.d("INICIALIZADO", "INICIALIZADO");
+                            }
+                        }
+                    }
+                });
+
+    }
+
+    private void salidaNumeroAltavoz(int numero) {
+        //////////Log.d("LAMADA", "VOZ");
+        if (numero > 0) {
+            if (!tts.isSpeaking()) {
+                String st = String.valueOf(numero);
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                    tts.speak(st, TextToSpeech.QUEUE_FLUSH, null, null);
+                } else {
+                    tts.speak(st, TextToSpeech.QUEUE_FLUSH, null);
+                }
+            }
+        }
+    }
+
 }

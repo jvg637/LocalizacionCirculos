@@ -165,6 +165,9 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
         cam_anchura = width;
 
         procesador = new Procesador();
+        // Lector de texto
+        procesador.inicializaVoz(getBaseContext());
+
     }
 
     @Override
