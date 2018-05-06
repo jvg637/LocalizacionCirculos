@@ -1,8 +1,6 @@
 package org.example.proyectobase;
 
 import android.content.Context;
-import android.os.Build;
-import android.speech.tts.TextToSpeech;
 import android.util.Log;
 
 import org.example.proyectobase.utils.OCRDigito;
@@ -21,7 +19,9 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Locale;
+
+import static org.example.proyectobase.MainActivity.cam_altura;
+import static org.example.proyectobase.MainActivity.cam_anchura;
 
 
 public class Procesador {
@@ -34,9 +34,12 @@ public class Procesador {
     private TipoBinarizacion tipoBinarizacionDisco;
     private boolean zoom;
     private int estabilizacion;
-    private int lastSpeedRed=-1;
+    private int lastSpeedRed = 0;
     private MainActivity.ObserverVelocity observerVelocity;
     private TipoPrioridadDeteccionVelocidad tipoPrioridadDeteccionVelocidad;
+    private int anguloARotar;
+    private int inicioX;
+    private Salida mostrarSalida;
 
     public void setTipoPreProceso(TipoPreproceso tipoPreProceso) {
         this.tipoPreProceso = tipoPreProceso;
@@ -97,6 +100,61 @@ public class Procesador {
     public TipoPrioridadDeteccionVelocidad getTipoPrioridadDeteccionVelocidad() {
         return tipoPrioridadDeteccionVelocidad;
     }
+
+    public void setAnguloARotar(int anguloARotar) {
+        this.anguloARotar = anguloARotar;
+    }
+
+    public int getAnguloARotar() {
+        return anguloARotar;
+    }
+
+
+    private int inicioY;
+    private int finY;
+
+    private int finX;
+
+    public void setInicioY(int inicioY) {
+        this.inicioY = inicioY;
+    }
+
+    public int getInicioY() {
+        return inicioY;
+    }
+
+    public void setFinY(int finY) {
+        this.finY = finY;
+    }
+
+    public int getFinY() {
+        return finY;
+    }
+
+    public void setInicioX(int inicioX) {
+        this.inicioX = inicioX;
+    }
+
+    public int getInicioX() {
+        return inicioX;
+    }
+
+    public void setFinX(int finX) {
+        this.finX = finX;
+    }
+
+    public int getFinX() {
+        return finX;
+    }
+
+    public void setMostrarSalida(Salida mostrarSalida) {
+        this.mostrarSalida = mostrarSalida;
+    }
+
+    public Salida getMostrarSalida() {
+        return mostrarSalida;
+    }
+
 
     ///////////////////////////////////////////////////////////////////////////////////
     // Inicio. Confguracón opciones de procesamiento
@@ -181,6 +239,12 @@ public class Procesador {
         Point P1 = rectCirculo.tl();
         Point P2 = rectCirculo.br();
 
+        if (zoom) {
+            P1.x += inicioX;
+            P1.y += inicioY;
+            P2.x += inicioX;
+            P2.y += inicioY;
+        }
         Imgproc.rectangle(salida, P1, P2, new Scalar(255, 0, 0));
 // Escribir numero
         int fontFace = 6;//FONT_HERSHEY_SCRIPT_SIMPLEX;
@@ -198,44 +262,108 @@ public class Procesador {
     private int lecturaVelocidadAnterior = -1;
     private int numeroVecesLeida = 0;
 
-    public Mat procesa(Mat entrada) {
-        Mat salida;
+
+    // Control de circulo MAX
+    int tamanyoMax = -1;
+    int posTamanyoMax = -1;
+    int velocidadTamanyoMax = -1;
+    // Control de velocidad MIN
+    int posVelocidadMin = -1;
+    int velocidadMin = Integer.MAX_VALUE;
+    // Posicion actual del Círculo que se segmenta
+    int posActual = 0;
+
+    /*
+    Inicialización de variables de detección de círculos de máximo ancho/mínima velocidad
+     */
+    public void inicializaVariablesControlVelocidadMinimaTamanyoMaximo() {
+        tamanyoMax = -1;
+        posTamanyoMax = -1;
+        velocidadTamanyoMax = -1;
+        // Control de velocidad MIN
+        posVelocidadMin = -1;
+        velocidadMin = Integer.MAX_VALUE;
+        // Posicion actual del Círculo que se segmenta
+        posActual = 0;
+    }
+
+    public Mat procesa(Mat entradaIn) {
+
+        Mat entrada;
         List<Rect> rectCirculos = new ArrayList<>();
-        // Aumento Lineal Contraste
+        inicializaVariablesControlVelocidadMinimaTamanyoMaximo();
+
+        /////////////////////////////////////////////////////////////
+        // Salida = entrada
+        escribeLog("Salida=" + mostrarSalida.name());
+        if (mostrarSalida == Salida.ENTRADA) {
+            Mat salida = entradaIn.clone();
+            if (zoom) {
+                Imgproc.rectangle(salida, new Point(inicioX, inicioY), new Point(finX - 1, finY - 1), new Scalar(0, 0, 255), 3);
+            }
+            return salida;
+        }
+        // Comprueba si está activazo el ZOOM
+        if (!zoom) {
+            entrada = entradaIn;
+        } else {
+            entrada = entradaIn.submat(inicioY, finY, inicioX, finX);
+        }
+
         escribeLog("Preproceso=" + tipoPreProceso.name());
         Mat salidaPreproceso = procesarLocal.preproceso(tipoPreProceso, entrada);
+        if (mostrarSalida == Salida.PREPROCESO) {
+            Imgproc.cvtColor(salidaPreproceso, salidaPreproceso, Imgproc.COLOR_GRAY2RGBA);
+            if (zoom) {
+                Imgproc.rectangle(salidaPreproceso, new Point(0, 0), new Point(salidaPreproceso.width() - 1, salidaPreproceso.height() - 1), new Scalar(0, 0, 255), 3);
+                entrada.release();
+            }
+            Imgproc.resize(salidaPreproceso, salidaPreproceso, new Size(cam_anchura, cam_altura));
+            return salidaPreproceso;
+        }
+        escribeLog("Binarizacion Preproceso=" + tipoBinarizacionPreProceso.name());
         Mat salidaBinarizacionPreproceso = procesarBinarizacion.binarizacionPreproceso(tipoBinarizacionPreProceso, salidaPreproceso);
+        if (mostrarSalida == Salida.BINARIZACION_PREPROCESO) {
+            Imgproc.cvtColor(salidaBinarizacionPreproceso, salidaBinarizacionPreproceso, Imgproc.COLOR_GRAY2RGBA);
+            if (zoom) {
+                Imgproc.rectangle(salidaBinarizacionPreproceso, new Point(0, 0), new Point(salidaBinarizacionPreproceso.width() - 1, salidaPreproceso.height() - 1), new Scalar(0, 0, 255), 3);
+                entrada.release();
+            }
+            Imgproc.resize(salidaBinarizacionPreproceso, salidaBinarizacionPreproceso, new Size(cam_anchura, cam_altura));
+
+            salidaPreproceso.release();
+            return salidaBinarizacionPreproceso;
+        }
+
         localizarCirculos(salidaBinarizacionPreproceso, rectCirculos);
+        if (mostrarSalida == Salida.LOCALIZACION_CIRCULOS) {
+            Imgproc.cvtColor(salidaBinarizacionPreproceso, salidaBinarizacionPreproceso, Imgproc.COLOR_GRAY2RGBA);
+            for (Rect rectCirculo : rectCirculos) {
+                dibujaCirculosEncontratos(salidaBinarizacionPreproceso, rectCirculo);
+            }
+            if (zoom) {
+                Imgproc.rectangle(salidaBinarizacionPreproceso, new Point(0, 0), new Point(salidaBinarizacionPreproceso.width() - 1, salidaPreproceso.height() - 1), new Scalar(0, 0, 255), 3);
+                entrada.release();
+            }
+            salidaPreproceso.release();
+            Imgproc.resize(salidaBinarizacionPreproceso, salidaBinarizacionPreproceso, new Size(cam_anchura, cam_altura));
+            return salidaBinarizacionPreproceso;
+        }
 
-        // Control de circulo MAX
-        int tamanyoMax = -1;
-        int posTamanyoMax = -1;
-        int velocidadTamanyoMax = -1;
-        // Control de velocidad MIN
-        int posVelocidadMin = -1;
-        int velocidadMin = Integer.MAX_VALUE;
-        // Posicion Auxliar
-        int posActual = 0;
-//        if (salidaBinarizacionPreproceso.channels() > 1)
-//        salida = entrada.clone();
-//        else {
-        salida = new Mat();
-        Imgproc.cvtColor(salidaBinarizacionPreproceso, salida, Imgproc.COLOR_GRAY2RGBA);
-//        }
+
+        Mat salida;
+
+        if (mostrarSalida == Salida.SEGMENTACION_CIRCULO) {
+            Imgproc.cvtColor(salidaBinarizacionPreproceso, salidaBinarizacionPreproceso, Imgproc.COLOR_GRAY2RGBA);
+        }
+
         for (Rect rectCirculo : rectCirculos) {
-            // Dibuja los circulos encontrados en rojo
 //            dibujaCirculosEncontratos(salida, rectCirculo);
-
-
             Mat circulo = entrada.submat(rectCirculo);
             List<Rect> rectDigits = new ArrayList<>();
-            // opcion 1: Componente Raoja + Otsu Inv
-            // opcion 2: Gris + Filtro Paso Alto Neg + Otsu
             segmentarInteriorDisco(circulo, rectCirculo, rectDigits, tipoSegmentacionCirculo);
 
-            // Dibuja Digitos candidatos
 //            dibujaDigitosEncontrados(salida, rectDigits);
-
             // Si tengo 2 o 3 digitos, les aplico OCR
             String velocidadStr = "";
             int velocidadFinal = -1;
@@ -251,7 +379,18 @@ public class Procesador {
                         velocidadStr = "";
                         break;
                     }
+                    digito.release();
                 }
+
+                if (mostrarSalida == Salida.SEGMENTACION_CIRCULO) {
+                    dibujaCirculosEncontratos(salidaBinarizacionPreproceso, rectCirculo);
+                    dibujaDigitosEncontrados(salidaBinarizacionPreproceso, rectDigits);
+                }
+                // Dibuja los circulos encontrados en rojo
+//                dibujaCirculosEncontratos(salida, rectCirculo);
+                // Dibuja Digitos candidatos
+//                dibujaDigitosEncontrados(salida, rectDigits);
+                // Si tengo 2 o 3 digitos, les aplico OCR
 
                 velocidadFinal = Integer.parseInt(velocidadStr);
 
@@ -272,27 +411,41 @@ public class Procesador {
                     }
                 }
             }
+            circulo.release();
             posActual++;
         }
 
+        if (mostrarSalida == Salida.SEGMENTACION_CIRCULO) {
+            if (zoom) {
+                Imgproc.rectangle(salidaBinarizacionPreproceso, new Point(0, 0), new Point(salidaBinarizacionPreproceso.width() - 1, salidaPreproceso.height() - 1), new Scalar(0, 0, 255), 3);
+                entrada.release();
+            }
+            salidaPreproceso.release();
+            Imgproc.resize(salidaBinarizacionPreproceso, salidaBinarizacionPreproceso, new Size(cam_anchura, cam_altura));
+            return salidaBinarizacionPreproceso;
+        }
         ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
         /// 7. MODULO DE VISUALIZACION DE LA SEÑAL SEGÚN PRIORIDAD SELECCIONADA EN PREFERENCIAS.
         ///    TAMBIÉN INCLUYE ESTABILIDAD
         ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-        moduloVisulizacionVelocidad(salida, rectCirculos, posTamanyoMax, velocidadTamanyoMax, posVelocidadMin, velocidadMin);
+        salida = entradaIn.clone();
+        moduloVisualizacionVelocidad(salida, rectCirculos);
+        if (zoom) {
+            Imgproc.rectangle(salida, new Point(inicioX, inicioY), new Point(finX - 1, finY - 1), new Scalar(0, 0, 255), 3);
+        }
         // Libera Memoria
-//        salidaGris.release();
-//        if (salidaIntensidad != salidaGris) {
-//            salidaIntensidad.release();
-//        }
         salidaPreproceso.release();
         salidaBinarizacionPreproceso.release();
         rectCirculos.clear();
+        if (entrada != entradaIn) {
+            entrada.release();
+        }
+
         return salida;
     }
 
 
-    private void moduloVisulizacionVelocidad(Mat salida, List<Rect> rectCirculos, int posTamanyoMax, int velocidadTamanyoMax, int posVelocidadMin, int velocidadMin) {
+    private void moduloVisualizacionVelocidad(Mat salida, List<Rect> rectCirculos) {
         ////////////////////////////////////////////////////////////////////////////////////////////////////
         // MODULO DE ESTABLIDAD
         ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -322,6 +475,8 @@ public class Procesador {
                 textSpeechVelocity.salidaNumeroAltavoz(lastSpeedRed);
             }
         }
+
+
     }
 
     private void reiniciaContadorLecturasEstabilizacion() {
@@ -340,7 +495,7 @@ public class Procesador {
     }
 
     private void dibujaCirculosEncontratos(Mat salida, Rect rectCirculo) {
-        Imgproc.rectangle(salida, rectCirculo.tl(), rectCirculo.br(), new Scalar(255, 0, 0));
+        Imgproc.rectangle(salida, rectCirculo.tl(), rectCirculo.br(), new Scalar(0, 0, 255));
     }
 
     private void localizarCirculos(Mat binaria, List<Rect> rectCirculos) {
@@ -608,9 +763,11 @@ public class Procesador {
 
     // Velocidades En España Ordenadas en binario
     private final String[] velocidadesEspanya = {"10", "20", "30", "40", "50", "60", "70", "80", "90", "100", "110", "120"};
+
     /**
      * Calcula la relacion entre la distancia mínima y maxima del centro para descartar triángulos y otras figuras geométrica.
      * Si la relación es 1 a 1 aproximadamente, estamos ante un figura circular
+     *
      * @param curr_blob
      * @return
      */

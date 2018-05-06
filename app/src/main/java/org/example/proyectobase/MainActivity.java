@@ -8,6 +8,10 @@ import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.hardware.Camera;
+import android.hardware.Sensor;
+import android.hardware.SensorEvent;
+import android.hardware.SensorEventListener;
+import android.hardware.SensorManager;
 import android.location.GpsStatus;
 import android.location.Location;
 import android.location.LocationListener;
@@ -32,6 +36,7 @@ import org.opencv.android.InstallCallbackInterface;
 import org.opencv.android.LoaderCallbackInterface;
 import org.opencv.android.OpenCVLoader;
 import org.opencv.android.Utils;
+import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 import org.opencv.core.Size;
 import org.opencv.imgcodecs.Imgcodecs;
@@ -43,7 +48,88 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class MainActivity extends AppCompatActivity implements CameraBridgeViewBase.CvCameraViewListener2,
-        LoaderCallbackInterface, LocationListener, GpsStatus.Listener {
+        LoaderCallbackInterface, LocationListener, GpsStatus.Listener, SensorEventListener {
+
+    float[] mGravity;
+    float[] mGeomagnetic;
+    float orientation[] = new float[3];
+    float pitch;
+    float azimut;
+    float roll;
+
+
+    //////////////////////////////////////////////////////////////////////////////
+    //// ACELEROMETRO. CALCULA ÁNGULO DE ROTACION
+    //////////////////////////////////////////////////////////////////////////////
+    @Override
+    public void onAccuracyChanged(Sensor sensor, int accuracy) {
+
+    }
+
+    @Override
+    public void onSensorChanged(SensorEvent evento) {
+        float acelerometroX = -1;
+        float acelerometroY = -1;
+        float acelerometroZ = -1;
+
+        acelerometroX = evento.values[0];
+        acelerometroY = evento.values[1];
+        acelerometroZ = evento.values[2];
+
+        int anguloARotar = 0;
+
+//        if (acelerometroX > 6.5) {
+//            anguloARotar = 0;
+//
+//            procesador.setInicioY ((int) (cam_altura * 1.0 / 6.0));
+//            procesador.setFinY((int) (cam_altura / 2.1 + procesador.getInicioY()));
+//
+//            procesador.setInicioX((int) (cam_anchura * 2.2 / 6.0));
+//            procesador.setFinX((int) (cam_anchura / 2.1 + procesador.getInicioX()));
+//
+//        } else if (acelerometroY > 6.5) {
+//            anguloARotar = -90;
+//
+//            procesador.setInicioY ((int) (cam_altura * 1.0 / 6.0));
+//            procesador.setFinY ( (int) (cam_altura / 2.1 + procesador.getInicioY()));
+//
+//            procesador.setInicioX ((int) (cam_anchura * 1.0 / 6.0));
+//            procesador.setFinX((int) (cam_anchura / 2.1 + procesador.getInicioX()));
+//
+//        } else if (acelerometroX < -6.5) {
+//            anguloARotar = -180;
+//
+//            procesador.setInicioY ((int) (cam_altura * 2.1 / 6.0));
+//            procesador.setFinY ((int) (cam_altura / 2.1 + procesador.getInicioY()));
+//
+//            procesador.setInicioX  ((int) (cam_anchura * 1.0 / 6.0));
+//            procesador.setFinX ((int) (cam_anchura / 2.1 + procesador.getInicioX()));
+//
+//        } else if (acelerometroY < -6.5) {
+//            anguloARotar = 90;
+//
+//            procesador.setInicioY ((int) (cam_altura * 2.2 / 6.0));
+//            procesador.setFinY((int) (cam_altura / 2.1 + procesador.getInicioY()));
+//
+//            procesador.setInicioX((int) (cam_anchura * 2.2 / 6.0));
+//            procesador.setFinX((int) (cam_anchura / 2.1 + procesador.getInicioX()));
+//        } else {
+//            anguloARotar = 0;
+//
+//            procesador.setInicioY((int) (cam_altura * 1.0 / 6.0));
+//            procesador.setFinY((int) (cam_altura / 2.1 + procesador.getInicioY()));
+//
+//            procesador.setInicioX((int) (cam_anchura * 2.2 / 6.0));
+//            procesador.setFinX((int) (cam_anchura / 2.1 + procesador.getInicioX()));
+//        }
+//        if (procesador != null) {
+//            if (tipoEntrada == 0)
+//                procesador.setAnguloARotar(anguloARotar);
+//            else
+//                procesador.setAnguloARotar(0);
+//
+//        }
+    }
 
     public interface ObserverVelocity {
         void actualizaVelocidadLeida(int velocidad);
@@ -61,8 +147,8 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
 
 
     private int indiceCamara; // 0-> camara trasera; 1-> camara frontal
-    private int cam_anchura = 800;// resolucion deseada de la imagen
-    private int cam_altura = 600;
+    public static int cam_anchura = 800;// resolucion deseada de la imagen
+    public static int cam_altura = 600;
     private static final String STATE_CAMERA_INDEX = "cameraIndex";
 
 
@@ -83,6 +169,10 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
     }
 
     private float speed = 0.0f;
+
+    private SensorManager mSensorManager;
+    private Sensor accelerometer;
+    private Sensor magnetometer;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -108,6 +198,10 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
             indiceCamara = CameraBridgeViewBase.CAMERA_ID_BACK;
         }
         cameraView.setCameraIndex(indiceCamara);
+
+        mSensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
+        accelerometer = mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
+        magnetometer = mSensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD);
     }
 
 
@@ -136,7 +230,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
     }
 
 
-    private static final int SOLICITUD_PERMISO_CAMERA = 0;
+    private static final int SOLICITUD_PERMISOS = 0;
 
     void solicitarPermisos() {
 
@@ -144,9 +238,8 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
                 ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) ||
                 ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.ACCESS_FINE_LOCATION)) {
             ActivityCompat.requestPermissions(MainActivity.this, new String[]{Manifest.permission.CAMERA, Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.WRITE_EXTERNAL_STORAGE},
-                    SOLICITUD_PERMISO_CAMERA);
-        }
-        else{
+                    SOLICITUD_PERMISOS);
+        } else {
             inicializaAplicacion();
         }
     }
@@ -180,7 +273,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
     public void onRequestPermissionsResult(int requestCode,
                                            String permissions[], int[] grantResults) {
         switch (requestCode) {
-            case SOLICITUD_PERMISO_CAMERA: {
+            case SOLICITUD_PERMISOS: {
                 // If request is cancelled, the result arrays are empty.
 
                 if ((ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED)
@@ -203,6 +296,15 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
         }
     }
 
+    private void calculaCoordenadasZoom() {
+        procesador.setInicioY((int) (cam_altura * 1.0 / 6.0));
+        procesador.setFinY((int) (cam_altura / 2.1 + procesador.getInicioY()));
+
+        procesador.setInicioX((int) (cam_anchura * 2.2 / 6.0));
+        procesador.setFinX((int) (cam_anchura / 2.1 + procesador.getInicioX()));
+
+    }
+
     //Interface CvCameraViewListener2
     //Inicio
     @Override
@@ -210,25 +312,28 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
         cam_altura = height; //Estas son las que se usan de verdad
         cam_anchura = width;
 
+
         procesador = new Procesador(this, new ObserverVelocity() {
             @Override
             public void actualizaVelocidadLeida(int velocidadLeida) {
                 updateSpeed(speed, velocidadLeida);
             }
         });
+        calculaCoordenadasZoom();
+
 
         PreferenceManager.setDefaultValues(this, R.xml.preferencias, false);
         SharedPreferences preferencias = PreferenceManager.getDefaultSharedPreferences(this);
 
         ////pantallaPartida = (preferencias.getBoolean("pantalla_partida", false));
 
-//        String valor = preferencias.getString("salida", Procesador.Salida.BINARIZACION_PREPROCESO.name());
-//        procesador.setMostrarSalida(Procesador.Salida.valueOf(valor));
+        String valor = preferencias.getString("salida", Procesador.Salida.BINARIZACION_PREPROCESO.name());
+        procesador.setMostrarSalida(Procesador.Salida.valueOf(valor));
 //
 //        valor = preferencias.getString("intensidad", Procesador.TipoIntensidad.AUMENTO_LINEAL_CONTRASTE.name());
 //        procesador.setTipoIntensidad(Procesador.TipoIntensidad.valueOf(valor));
 
-        String valor = preferencias.getString("preproceso", Procesador.TipoPreproceso.GRADIENTE_MORFOLOGICO_DILATACION.name());
+        valor = preferencias.getString("preproceso", Procesador.TipoPreproceso.GRADIENTE_MORFOLOGICO_DILATACION.name());
         procesador.setTipoPreProceso(Procesador.TipoPreproceso.valueOf(valor));
 
         valor = preferencias.getString("binarizacion_preproceso", Procesador.TipoBinarizacion.ADAPTATIVA.name());
@@ -239,11 +344,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
 
         valor = preferencias.getString("binarizacion_segmentacion_disco", Procesador.TipoBinarizacion.OTSU_INV.name());
         procesador.setTipoBinarizacionDisco(Procesador.TipoBinarizacion.valueOf(valor));
-//
-//        valor = preferencias.getString("reconocimiento", Procesador.TipoReconocimiento.OTSU.name());
-//        procesador.setTipoReconocimiento(Procesador.TipoReconocimiento.valueOf(valor));
-//
-//
+
         valor = preferencias.getString("prioridad_deteccion", Procesador.TipoPrioridadDeteccionVelocidad.VELOCIDAD.name());
         procesador.setTipoPrioridadDeteccionVelocidad(Procesador.TipoPrioridadDeteccionVelocidad.valueOf(valor));
 //
@@ -253,12 +354,14 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
         boolean valorBoleean = preferencias.getBoolean("zoom", false);
         procesador.setZoom(valorBoleean);
 
-
+        entrada = new Mat(height, width, CvType.CV_8UC4);
     }
 
     @Override
     public void onCameraViewStopped() {
-
+        entrada.release();
+        if (salida != null)
+            salida.release();
     }
 
     private int RECURSOS_FICHEROS[];
@@ -273,10 +376,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
             if (imagenRecurso_ != null)
                 imagenRecurso_.release();
 
-            if (imagenColor)
-                entrada = inputFrame.rgba();
-            else
-                entrada = inputFrame.gray();
+            entrada = inputFrame.rgba();
 
         } else {
             if (recargarRecurso == true) {
@@ -422,8 +522,6 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
     public void onResume() {
         super.onResume();
         solicitarPermisos();
-
-
     }
 
     @Override
@@ -435,6 +533,12 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
         if (locationManager != null)
             locationManager.removeUpdates(this);
 
+        initListenersOrientation();
+    }
+
+    private void initListenersOrientation() {
+        mSensorManager.registerListener(this, accelerometer, SensorManager.SENSOR_DELAY_FASTEST);
+        mSensorManager.registerListener(this, magnetometer, SensorManager.SENSOR_DELAY_FASTEST);
     }
 
     @Override
@@ -496,16 +600,6 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
             case R.id.guardar_imagenes:
                 guardarSiguienteImagen = true;
                 break;
-//            case R.id.entrada_imagen_color:
-//                if (item.isChecked()) {
-//                    imagenColor = false;
-//                    item.setChecked(false);
-//                } else {
-//                    imagenColor = true;
-//                    item.setChecked(true);
-//                }
-//                recargarRecurso = true;
-//                break;
             case R.id.dividir_pantalla:
                 if (item.isChecked()) {
                     dividirImagen = false;
@@ -624,5 +718,4 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
     }
 
     final String strUnits = "km/h";
-
 }
