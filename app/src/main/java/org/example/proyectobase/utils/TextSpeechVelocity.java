@@ -28,15 +28,15 @@ public class TextSpeechVelocity {
         });
     }
 
-    public void salidaNumeroAltavoz(String velocidad) {
+    public void salidaNumeroAltavoz(int velocidad) {
         //////////Log.d("LAMADA", "VOZ");
-        if (velocidad.length() > 0) {
+        if (velocidad > 0) {
             if (!tts.isSpeaking()) {
 
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                    tts.speak(velocidad, TextToSpeech.QUEUE_FLUSH, null, null);
+                    tts.speak(String.valueOf(velocidad), TextToSpeech.QUEUE_FLUSH, null, null);
                 } else {
-                    tts.speak(velocidad, TextToSpeech.QUEUE_FLUSH, null);
+                    tts.speak(String.valueOf(velocidad), TextToSpeech.QUEUE_FLUSH, null);
                 }
             }
         }

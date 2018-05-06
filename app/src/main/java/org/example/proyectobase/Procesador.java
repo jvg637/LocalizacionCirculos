@@ -34,6 +34,9 @@ public class Procesador {
     private TipoBinarizacion tipoBinarizacionDisco;
     private boolean zoom;
     private int estabilizacion;
+    private int lastSpeedRed=-1;
+    private MainActivity.ObserverVelocity observerVelocity;
+    private TipoPrioridadDeteccionVelocidad tipoPrioridadDeteccionVelocidad;
 
     public void setTipoPreProceso(TipoPreproceso tipoPreProceso) {
         this.tipoPreProceso = tipoPreProceso;
@@ -77,6 +80,22 @@ public class Procesador {
 
     public void setEstabilizacion(int estabilizacion) {
         this.estabilizacion = estabilizacion;
+    }
+
+    public int getLastSpeedRed() {
+        return lastSpeedRed;
+    }
+
+    public void setLastSpeedRed(int lastSpeedRed) {
+        this.lastSpeedRed = lastSpeedRed;
+    }
+
+    public void setTipoPrioridadDeteccionVelocidad(TipoPrioridadDeteccionVelocidad tipoPrioridadDeteccionVelocidad) {
+        this.tipoPrioridadDeteccionVelocidad = tipoPrioridadDeteccionVelocidad;
+    }
+
+    public TipoPrioridadDeteccionVelocidad getTipoPrioridadDeteccionVelocidad() {
+        return tipoPrioridadDeteccionVelocidad;
     }
 
     ///////////////////////////////////////////////////////////////////////////////////
@@ -138,7 +157,8 @@ public class Procesador {
         }
     };
 
-    public Procesador(Context context) {
+    public Procesador(Context context, MainActivity.ObserverVelocity observerVelocity) {
+        this.observerVelocity = observerVelocity;
         procesarLocal = new ProcesadorPreproceso(TipoEstrategiaPreproceso.MIXTO);
         procesadorIntensidad = new ProcesadorIntensidad();
         procesarBinarizacion = new ProcesadorBinarizacion();
@@ -157,7 +177,7 @@ public class Procesador {
     } //Constructor
 
 
-    void dibujarResultado(Mat salida, Rect rectCirculo, String digit) {
+    void dibujarResultado(Mat salida, Rect rectCirculo, int digit) {
         Point P1 = rectCirculo.tl();
         Point P2 = rectCirculo.br();
 
@@ -166,14 +186,17 @@ public class Procesador {
         int fontFace = 6;//FONT_HERSHEY_SCRIPT_SIMPLEX;
         double fontScale = 1;
         int thickness = 5;
-        Imgproc.putText(salida, digit,
+        Imgproc.putText(salida, String.valueOf(digit),
                 P1, fontFace, fontScale,
                 new Scalar(0, 0, 0), thickness, 8, false);
-        Imgproc.putText(salida, digit,
+        Imgproc.putText(salida, String.valueOf(digit),
                 P1, fontFace, fontScale,
                 new Scalar(255, 255, 255), thickness / 2, 8, false);
     }
 
+    // Variables para la estabilidad de las tomas
+    private int lecturaVelocidadAnterior = -1;
+    private int numeroVecesLeida = 0;
 
     public Mat procesa(Mat entrada) {
         Mat salida;
@@ -184,6 +207,15 @@ public class Procesador {
         Mat salidaBinarizacionPreproceso = procesarBinarizacion.binarizacionPreproceso(tipoBinarizacionPreProceso, salidaPreproceso);
         localizarCirculos(salidaBinarizacionPreproceso, rectCirculos);
 
+        // Control de circulo MAX
+        int tamanyoMax = -1;
+        int posTamanyoMax = -1;
+        int velocidadTamanyoMax = -1;
+        // Control de velocidad MIN
+        int posVelocidadMin = -1;
+        int velocidadMin = Integer.MAX_VALUE;
+        // Posicion Auxliar
+        int posActual = 0;
 //        if (salidaBinarizacionPreproceso.channels() > 1)
 //        salida = entrada.clone();
 //        else {
@@ -192,7 +224,7 @@ public class Procesador {
 //        }
         for (Rect rectCirculo : rectCirculos) {
             // Dibuja los circulos encontrados en rojo
-            dibujaCirculosEncontratos(salida, rectCirculo);
+//            dibujaCirculosEncontratos(salida, rectCirculo);
 
 
             Mat circulo = entrada.submat(rectCirculo);
@@ -202,10 +234,11 @@ public class Procesador {
             segmentarInteriorDisco(circulo, rectCirculo, rectDigits, tipoSegmentacionCirculo);
 
             // Dibuja Digitos candidatos
-            dibujaDigitosEncontrados(salida, rectDigits);
+//            dibujaDigitosEncontrados(salida, rectDigits);
 
             // Si tengo 2 o 3 digitos, les aplico OCR
             String velocidadStr = "";
+            int velocidadFinal = -1;
             if (rectDigits.size() >= 2 && rectDigits.size() <= 3) {
                 for (Rect rectDigito : rectDigits) {
                     Mat digito = entrada.submat(rectDigito);
@@ -220,15 +253,33 @@ public class Procesador {
                     }
                 }
 
+                velocidadFinal = Integer.parseInt(velocidadStr);
+
                 if (!velocidadStr.isEmpty()) {
                     if (Arrays.binarySearch(velocidadesEspanya, velocidadStr, comparatorStr) >= 0) {
-                        dibujarResultado(salida, rectCirculo, velocidadStr);
-                        textSpeechVelocity.salidaNumeroAltavoz(velocidadStr);
+                        /////////////////////////////////////////////////////////////////////////////////////////////////////
+                        //// ACTUALIZA LA VELOCIDAD MINIMA Y EL TAMAÑO MÁXIMO HASTA EL MOMENTO
+                        /////////////////////////////////////////////////////////////////////////////////////////////////////
+                        if (rectCirculo.width > tamanyoMax) {
+                            tamanyoMax = rectCirculo.width;
+                            posTamanyoMax = posActual;
+                            velocidadTamanyoMax = velocidadFinal;
+                        }
+                        if (velocidadFinal < velocidadMin) {
+                            velocidadMin = velocidadFinal;
+                            posVelocidadMin = posActual;
+                        }
                     }
                 }
             }
+            posActual++;
         }
 
+        ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+        /// 7. MODULO DE VISUALIZACION DE LA SEÑAL SEGÚN PRIORIDAD SELECCIONADA EN PREFERENCIAS.
+        ///    TAMBIÉN INCLUYE ESTABILIDAD
+        ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+        moduloVisulizacionVelocidad(salida, rectCirculos, posTamanyoMax, velocidadTamanyoMax, posVelocidadMin, velocidadMin);
         // Libera Memoria
 //        salidaGris.release();
 //        if (salidaIntensidad != salidaGris) {
@@ -238,6 +289,44 @@ public class Procesador {
         salidaBinarizacionPreproceso.release();
         rectCirculos.clear();
         return salida;
+    }
+
+
+    private void moduloVisulizacionVelocidad(Mat salida, List<Rect> rectCirculos, int posTamanyoMax, int velocidadTamanyoMax, int posVelocidadMin, int velocidadMin) {
+        ////////////////////////////////////////////////////////////////////////////////////////////////////
+        // MODULO DE ESTABLIDAD
+        ////////////////////////////////////////////////////////////////////////////////////////////////////
+        int velocidad = (tipoPrioridadDeteccionVelocidad == TipoPrioridadDeteccionVelocidad.VELOCIDAD) ? velocidadMin : velocidadTamanyoMax;
+        if (posTamanyoMax != -1) {
+            if (lecturaVelocidadAnterior != velocidad) {
+                lecturaVelocidadAnterior = velocidad;
+                numeroVecesLeida = 1;
+            } else {
+                numeroVecesLeida++;
+            }
+        } else {
+            reiniciaContadorLecturasEstabilizacion();
+        }
+        // Estabiliza la lectura
+        if (numeroVecesLeida >= estabilizacion && posTamanyoMax >= 0) {
+            //////////Log.d("LECTURAS_OK", "VELOCIDAD MAX: " + numeroVecesLeida + " " + velocidad + " TAMAÑO MAX: " + tamanyoMax);
+            if (tipoPrioridadDeteccionVelocidad == TipoPrioridadDeteccionVelocidad.VELOCIDAD) {
+                dibujarResultado(salida, rectCirculos.get(posVelocidadMin), velocidad);
+            } else {
+                dibujarResultado(salida, rectCirculos.get(posTamanyoMax), velocidad);
+            }
+
+            if (numeroVecesLeida == estabilizacion) {
+                lastSpeedRed = velocidad;
+                observerVelocity.actualizaVelocidadLeida(lastSpeedRed);
+                textSpeechVelocity.salidaNumeroAltavoz(lastSpeedRed);
+            }
+        }
+    }
+
+    private void reiniciaContadorLecturasEstabilizacion() {
+        lecturaVelocidadAnterior = -1;
+        numeroVecesLeida = 0;
     }
 
     private void escribeLog(String txt) {
@@ -519,9 +608,12 @@ public class Procesador {
 
     // Velocidades En España Ordenadas en binario
     private final String[] velocidadesEspanya = {"10", "20", "30", "40", "50", "60", "70", "80", "90", "100", "110", "120"};
-
-
-    // Calcula la relacion entre la distancia mínima y maxima del centro para descartar triángulos y otras figuras geométrica
+    /**
+     * Calcula la relacion entre la distancia mínima y maxima del centro para descartar triángulos y otras figuras geométrica.
+     * Si la relación es 1 a 1 aproximadamente, estamos ante un figura circular
+     * @param curr_blob
+     * @return
+     */
     private double minMaxDistanceRatio(MatOfPoint curr_blob) {
         Point Sum = new Point(0.0, 0.0);
         // Compute the center of gravity of ponts of contour
@@ -556,47 +648,4 @@ public class Procesador {
         r.release();
         return dst;
     }
-
-
-//    ////////////////////////////////////////////////////////////////////////////////////////////////////
-//    // MODULO DE ESTABLIDAD
-//    ////////////////////////////////////////////////////////////////////////////////////////////////////
-//    private void moduloVisulizacionVelocidad(Mat entrada, ArrayList<Rect> rectCirculos, int tamanyoMax, int posTamanyoMax, int velocidadTamanyoMax, int posVelocidadMin, int velocidadMin) {
-//        int velocidad = (tipoPrioridad == TipoPrioridad.VELOCIDAD) ? velocidadMin : velocidadTamanyoMax;
-//
-//        if (posTamanyoMax != -1) {
-//            if (lecturaVelocidadAnterior != velocidad) {
-//                lecturaVelocidadAnterior = velocidad;
-//                numeroVecesLeida = 1;
-//            } else {
-//                numeroVecesLeida++;
-//            }
-//            //////////Log.d("LECTURAS_OK", "" + numeroVecesLeida);
-//        } else {
-//            reiniciaContadorLecturasEstabilizacion();
-//        }
-//
-//        /*for (Rect rectCirculo : rectCirculos) {
-//            Imgproc.rectangle
-//                    (entrada, new Point(rectCirculo.x, rectCirculo.y),
-//                            new Point(rectCirculo.width + rectCirculo.x - 1, rectCirculo.height + rectCirculo.y - 1), new Scalar(255, 0, 0));
-//
-//        }*/
-//
-//
-//        // Estabiliza la lectura
-//        if (numeroVecesLeida >= estabilizacion && posTamanyoMax >= 0) {
-//            //////////Log.d("LECTURAS_OK", "VELOCIDAD MAX: " + numeroVecesLeida + " " + velocidad + " TAMAÑO MAX: " + tamanyoMax);
-//            if (tipoPrioridad == TipoPrioridad.VELOCIDAD) {
-//                dibujarResultado(entrada, rectCirculos.get(posVelocidadMin), String.valueOf(velocidad));
-//            } else {
-//                dibujarResultado(entrada, rectCirculos.get(posTamanyoMax), String.valueOf(velocidad));
-//            }
-//
-//            if (numeroVecesLeida == estabilizacion)
-//                salidaNumeroAltavoz(velocidad);
-//        }
-//    }
-
-
 }

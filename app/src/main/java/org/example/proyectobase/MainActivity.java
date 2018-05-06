@@ -1,18 +1,21 @@
 package org.example.proyectobase;
 
 import android.Manifest;
+import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.hardware.Camera;
+import android.location.GpsStatus;
+import android.location.Location;
+import android.location.LocationListener;
+import android.location.LocationManager;
 import android.os.Bundle;
 import android.os.Environment;
 import android.preference.PreferenceManager;
-import android.speech.tts.TextToSpeech;
 import android.support.v4.app.ActivityCompat;
-import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.Menu;
@@ -21,9 +24,9 @@ import android.view.MenuItem;
 import android.view.MotionEvent;
 import android.view.SubMenu;
 import android.view.WindowManager;
+import android.widget.TextView;
 import android.widget.Toast;
 
-import org.example.proyectobase.utils.TextSpeechVelocity;
 import org.opencv.android.CameraBridgeViewBase;
 import org.opencv.android.InstallCallbackInterface;
 import org.opencv.android.LoaderCallbackInterface;
@@ -40,7 +43,16 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class MainActivity extends AppCompatActivity implements CameraBridgeViewBase.CvCameraViewListener2,
-        LoaderCallbackInterface {
+        LoaderCallbackInterface, LocationListener, GpsStatus.Listener {
+
+    public interface ObserverVelocity {
+        void actualizaVelocidadLeida(int velocidad);
+    }
+
+    private final long TIEMPO_MIN = 10 * 5000; // 5 segundos
+    private final long DISTANCIA_MIN = 5; // 5 metros
+    private LocationManager locationManager;
+
 
     public static boolean logOn = true;
 
@@ -60,6 +72,8 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
     private boolean dividirImagen = false;
     public static boolean aumentoLineal = false;
     private boolean imagenColor = true;
+    private TextView txtCurrentSpeed;
+    private TextView txtCurrentaLastSpeedRed;
 
     @Override
     public void onSaveInstanceState(Bundle savedInstanceState) {
@@ -67,6 +81,8 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
         savedInstanceState.putInt(STATE_CAMERA_INDEX, indiceCamara);
         super.onSaveInstanceState(savedInstanceState);
     }
+
+    private float speed = 0.0f;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -78,6 +94,10 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
 
 //        View contenedor = (View) findViewById(R.id.contenedor);
 //        registerForContextMenu(contenedor);
+        txtCurrentSpeed = (TextView) this.findViewById(R.id.txtCurrentSpeed);
+        txtCurrentaLastSpeedRed = (TextView) this.findViewById(R.id.txtCurrentaLastSpeedRed);
+
+        locationManager = (LocationManager) this.getSystemService(Context.LOCATION_SERVICE);
 
         cameraView = (CameraBridgeViewBase) findViewById(R.id.vista_camara);
         cameraView.setCvCameraViewListener(this);
@@ -120,19 +140,39 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
 
     void solicitarPermisos() {
 
-        if (ContextCompat.checkSelfPermission(this,
-                Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
-            if (ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.CAMERA)) {
-                ActivityCompat.requestPermissions(MainActivity.this, new String[]{Manifest.permission.CAMERA},
-                        SOLICITUD_PERMISO_CAMERA);
-            } else {
-                ActivityCompat.requestPermissions(this,
-                        new String[]{Manifest.permission.CAMERA},
-                        SOLICITUD_PERMISO_CAMERA);
-            }
-        } else {
-            OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION, this,
-                    this);
+        if (ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.CAMERA) ||
+                ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) ||
+                ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.ACCESS_FINE_LOCATION)) {
+            ActivityCompat.requestPermissions(MainActivity.this, new String[]{Manifest.permission.CAMERA, Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.WRITE_EXTERNAL_STORAGE},
+                    SOLICITUD_PERMISO_CAMERA);
+        }
+        else{
+            inicializaAplicacion();
+        }
+    }
+
+    private void inicializaAplicacion() {
+        // permission denied, boo! Disable the
+        // functionality that depends on this permission.
+        OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION, this,
+                this);
+
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            // TODO: Consider calling
+            //    ActivityCompat#requestPermissions
+            // here to request the missing permissions, and then overriding
+            //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
+            //                                          int[] grantResults)
+            // to handle the case where the user grants the permission. See the documentation
+            // for ActivityCompat#requestPermissions for more details.
+            return;
+        }
+        if (locationManager != null) {
+            Location lastKnownLocation = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
+
+            speed = (lastKnownLocation != null) ? lastKnownLocation.getSpeed() * 3.6f : 0.0f;
+            this.updateSpeed(speed, 0);
+            locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, TIEMPO_MIN, DISTANCIA_MIN, this);
         }
     }
 
@@ -142,21 +182,22 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
         switch (requestCode) {
             case SOLICITUD_PERMISO_CAMERA: {
                 // If request is cancelled, the result arrays are empty.
-                if (grantResults.length > 0
-                        && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
 
+                if ((ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED)
+                        ||
+                        (ActivityCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED)
+                        ||
+                        (ActivityCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED)) {
                     // permission was granted, yay! Do the
                     // contacts-related task you need to do.
-                    OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION, this,
-                            this);
-                } else {
+                    Toast.makeText(this, "Se deben aceptar todos los permisos para inicializar la aplicación", Toast.LENGTH_SHORT).show();
+                    finish();
 
-                    // permission denied, boo! Disable the
-                    // functionality that depends on this permission.
+                } else {
+                    inicializaAplicacion();
                 }
                 return;
             }
-
             // other 'case' lines to check for other
             // permissions this app might request
         }
@@ -169,7 +210,12 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
         cam_altura = height; //Estas son las que se usan de verdad
         cam_anchura = width;
 
-        procesador = new Procesador(this);
+        procesador = new Procesador(this, new ObserverVelocity() {
+            @Override
+            public void actualizaVelocidadLeida(int velocidadLeida) {
+                updateSpeed(speed, velocidadLeida);
+            }
+        });
 
         PreferenceManager.setDefaultValues(this, R.xml.preferencias, false);
         SharedPreferences preferencias = PreferenceManager.getDefaultSharedPreferences(this);
@@ -198,8 +244,8 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
 //        procesador.setTipoReconocimiento(Procesador.TipoReconocimiento.valueOf(valor));
 //
 //
-//        valor = preferencias.getString("prioridad_deteccion", Procesador.TipoPrioridad.VELOCIDAD.name());
-//        procesador.setTipoPrioridad(Procesador.TipoPrioridad.valueOf(valor));
+        valor = preferencias.getString("prioridad_deteccion", Procesador.TipoPrioridadDeteccionVelocidad.VELOCIDAD.name());
+        procesador.setTipoPrioridadDeteccionVelocidad(Procesador.TipoPrioridadDeteccionVelocidad.valueOf(valor));
 //
         valor = preferencias.getString("estabilidad", "2");
         procesador.setEstabilizacion(Integer.parseInt(valor));
@@ -376,6 +422,8 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
     public void onResume() {
         super.onResume();
         solicitarPermisos();
+
+
     }
 
     @Override
@@ -383,6 +431,10 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
         super.onPause();
         if (cameraView != null)
             cameraView.disableView();
+
+        if (locationManager != null)
+            locationManager.removeUpdates(this);
+
     }
 
     @Override
@@ -503,6 +555,41 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
         cameraView.enableView();
     }
 
+
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+
+    /***************************************** GPS ***********************************************/
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+    @Override
+    public void onLocationChanged(Location location) {
+        // TODO Auto-generated method stub
+        if (location != null) {
+            speed = location.getSpeed() * 3.6f;
+            this.updateSpeed(speed, procesador.getLastSpeedRed());
+        }
+    }
+
+
+    @Override
+    public void onProviderDisabled(String provider) {
+
+    }
+
+    @Override
+    public void onProviderEnabled(String provider) {
+
+    }
+
+    @Override
+    public void onStatusChanged(String provider, int status, Bundle extras) {
+
+    }
+
+    @Override
+    public void onGpsStatusChanged(int event) {
+
+    }
+
 //    @Override
 //    public boolean onContextItemSelected(MenuItem item) {
 //        AdapterView.AdapterContextMenuInfo info = (AdapterView.AdapterContextMenuInfo) item.getMenuInfo();
@@ -517,5 +604,25 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
 //                return super.onContextItemSelected(item);
 //        }
 //    }
+
+
+    public void updateSpeed(final float speed, final int lastSpeedRed) {
+        // TODO Auto-generated method stub
+        txtCurrentSpeed.post(new Runnable() {
+            @Override
+            public void run() {
+                txtCurrentSpeed.setText(String.format("% 4.1f", speed) + " " + strUnits);
+            }
+        });
+
+        txtCurrentaLastSpeedRed.post(new Runnable() {
+            @Override
+            public void run() {
+                txtCurrentaLastSpeedRed.setText(String.format("% 4d", lastSpeedRed) + " " + strUnits);
+            }
+        });
+    }
+
+    final String strUnits = "km/h";
 
 }
