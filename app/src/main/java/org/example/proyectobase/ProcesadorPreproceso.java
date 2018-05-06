@@ -31,9 +31,12 @@ public class ProcesadorPreproceso {
                 break;
             case FILTRO_PASO_ALTO_NEG:
                 // Entrada Gris
-                gris = procesadorIntensidad.toGray(entradaColor);
-                salida = procesarLocal.filtroPANeg(gris);
-
+                if (entradaColor.channels() > 1) {
+                    gris = procesadorIntensidad.toGray(entradaColor);
+                    salida = procesarLocal.filtroPANeg(gris);
+                } else {
+                    salida = procesarLocal.filtroPANeg(entradaColor);
+                }
                 break;
             case FILTRO_PASO_ALTO_NEG_GAUSSIANO:
                 gris = procesadorIntensidad.toGray(entradaColor);

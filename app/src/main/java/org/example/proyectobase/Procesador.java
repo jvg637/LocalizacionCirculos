@@ -37,7 +37,7 @@ public class Procesador {
     private int lastSpeedRed = 0;
     private MainActivity.ObserverVelocity observerVelocity;
     private TipoPrioridadDeteccionVelocidad tipoPrioridadDeteccionVelocidad;
-    private int anguloARotar;
+    private int anguloARotar = 90;
     private int inicioX;
     private Salida mostrarSalida;
 
@@ -288,7 +288,6 @@ public class Procesador {
     }
 
     public Mat procesa(Mat entradaIn) {
-
         Mat entrada;
         List<Rect> rectCirculos = new ArrayList<>();
         inicializaVariablesControlVelocidadMinimaTamanyoMaximo();
@@ -355,11 +354,15 @@ public class Procesador {
 
         if (mostrarSalida == Salida.SEGMENTACION_CIRCULO) {
             Imgproc.cvtColor(salidaBinarizacionPreproceso, salidaBinarizacionPreproceso, Imgproc.COLOR_GRAY2RGBA);
+//            salidaBinarizacionPreproceso = rotate(salidaBinarizacionPreproceso, -anguloARotar);
         }
 
         for (Rect rectCirculo : rectCirculos) {
 //            dibujaCirculosEncontratos(salida, rectCirculo);
             Mat circulo = entrada.submat(rectCirculo);
+            if (anguloARotar != 0)
+                circulo = rotate(circulo, -anguloARotar);
+
             List<Rect> rectDigits = new ArrayList<>();
             segmentarInteriorDisco(circulo, rectCirculo, rectDigits, tipoSegmentacionCirculo);
 
@@ -369,9 +372,21 @@ public class Procesador {
             int velocidadFinal = -1;
             if (rectDigits.size() >= 2 && rectDigits.size() <= 3) {
                 for (Rect rectDigito : rectDigits) {
-                    Mat digito = entrada.submat(rectDigito);
+                    Mat digito = circulo.submat(rectDigito);
+//                    if (anguloARotar != 0)
+//                        digito = rotate(digito, -anguloARotar);
+
+//                    if (zoom) {
+//                        Imgproc.rectangle(digito, new Point(0, 0), new Point(salidaBinarizacionPreproceso.width() - 1, salidaPreproceso.height() - 1), new Scalar(0, 0, 255), 3);
+//                        entrada.release();
+//                        Imgproc.resize(digito, digito, new Size(cam_anchura, cam_altura));
+//                        salidaPreproceso.release();
+//                        return digito;
+//                    }
+
 
                     int velocidad = leerDigitoOcr(digito);
+
                     if (velocidad != -1) {
                         velocidadStr += velocidad;
                     } else {
@@ -384,7 +399,7 @@ public class Procesador {
 
                 if (mostrarSalida == Salida.SEGMENTACION_CIRCULO) {
                     dibujaCirculosEncontratos(salidaBinarizacionPreproceso, rectCirculo);
-                    dibujaDigitosEncontrados(salidaBinarizacionPreproceso, rectDigits);
+                    dibujaDigitosEncontrados(salidaBinarizacionPreproceso, rectDigits,rectCirculo);
                 }
                 // Dibuja los circulos encontrados en rojo
 //                dibujaCirculosEncontratos(salida, rectCirculo);
@@ -488,9 +503,15 @@ public class Procesador {
         Log.d("DEBUG", txt);
     }
 
-    private void dibujaDigitosEncontrados(Mat salida, List<Rect> rectDigits) {
+    private void dibujaDigitosEncontrados(Mat salida, List<Rect> rectDigits, Rect rectCirculo) {
         for (Rect rectCirculoAux : rectDigits) {
-            Imgproc.rectangle(salida, rectCirculoAux.tl(), rectCirculoAux.br(), new Scalar(0, 255, 0));
+            Point P1 = rectCirculoAux.tl();
+            P1.x+=rectCirculo.x;
+            P1.y+=rectCirculo.y;
+            Point P2 = rectCirculoAux.br();
+            P2.x+=rectCirculo.x;
+            P2.y+=rectCirculo.y;
+            Imgproc.rectangle(salida, P1, P2, new Scalar(0, 255, 0));
         }
     }
 
@@ -651,8 +672,8 @@ public class Procesador {
             }
             // Añade a la coordenada X la posición del Círculo para que sean coordenadas absolutas
             for (Rect rectDigit : rectDigits) {
-                rectDigit.x += rectCirculo.x;
-                rectDigit.y += rectCirculo.y;
+//                rectDigit.x += rectCirculo.x;
+//                rectDigit.y += rectCirculo.y;
             }
         } else {
             rectDigits.clear();
@@ -800,7 +821,7 @@ public class Procesador {
     Mat rotate(Mat src, int angle) {
         Mat dst = new Mat();
         Point pt = new Point(src.width() / 2.0, src.height() / 2.0);
-        Mat r = Imgproc.getRotationMatrix2D(pt, (angle != -1) ? angle : 0, 1.0);
+        Mat r = Imgproc.getRotationMatrix2D(pt, angle, 1.0);
         Imgproc.warpAffine(src, dst, r, new Size(src.width(), src.height()));
         r.release();
         return dst;
