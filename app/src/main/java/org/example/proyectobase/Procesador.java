@@ -37,7 +37,7 @@ public class Procesador {
     private int lastSpeedRed = 0;
     private MainActivity.ObserverVelocity observerVelocity;
     private TipoPrioridadDeteccionVelocidad tipoPrioridadDeteccionVelocidad;
-    private int anguloARotar = 90;
+    private int anguloARotar = 0;
     private int inicioX;
     private Salida mostrarSalida;
 

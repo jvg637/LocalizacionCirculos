@@ -79,57 +79,57 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
 
         int anguloARotar = 0;
 
-//        if (acelerometroX > 6.5) {
-//            anguloARotar = 0;
-//
-//            procesador.setInicioY ((int) (cam_altura * 1.0 / 6.0));
-//            procesador.setFinY((int) (cam_altura / 2.1 + procesador.getInicioY()));
-//
-//            procesador.setInicioX((int) (cam_anchura * 2.2 / 6.0));
-//            procesador.setFinX((int) (cam_anchura / 2.1 + procesador.getInicioX()));
-//
-//        } else if (acelerometroY > 6.5) {
-//            anguloARotar = -90;
-//
-//            procesador.setInicioY ((int) (cam_altura * 1.0 / 6.0));
-//            procesador.setFinY ( (int) (cam_altura / 2.1 + procesador.getInicioY()));
-//
-//            procesador.setInicioX ((int) (cam_anchura * 1.0 / 6.0));
-//            procesador.setFinX((int) (cam_anchura / 2.1 + procesador.getInicioX()));
-//
-//        } else if (acelerometroX < -6.5) {
-//            anguloARotar = -180;
-//
-//            procesador.setInicioY ((int) (cam_altura * 2.1 / 6.0));
-//            procesador.setFinY ((int) (cam_altura / 2.1 + procesador.getInicioY()));
-//
-//            procesador.setInicioX  ((int) (cam_anchura * 1.0 / 6.0));
-//            procesador.setFinX ((int) (cam_anchura / 2.1 + procesador.getInicioX()));
-//
-//        } else if (acelerometroY < -6.5) {
-//            anguloARotar = 90;
-//
-//            procesador.setInicioY ((int) (cam_altura * 2.2 / 6.0));
-//            procesador.setFinY((int) (cam_altura / 2.1 + procesador.getInicioY()));
-//
-//            procesador.setInicioX((int) (cam_anchura * 2.2 / 6.0));
-//            procesador.setFinX((int) (cam_anchura / 2.1 + procesador.getInicioX()));
-//        } else {
-//            anguloARotar = 0;
-//
-//            procesador.setInicioY((int) (cam_altura * 1.0 / 6.0));
-//            procesador.setFinY((int) (cam_altura / 2.1 + procesador.getInicioY()));
-//
-//            procesador.setInicioX((int) (cam_anchura * 2.2 / 6.0));
-//            procesador.setFinX((int) (cam_anchura / 2.1 + procesador.getInicioX()));
-//        }
-//        if (procesador != null) {
-//            if (tipoEntrada == 0)
-//                procesador.setAnguloARotar(anguloARotar);
-//            else
-//                procesador.setAnguloARotar(0);
-//
-//        }
+        if (acelerometroX > 6.5 || acelerometroZ>6.5) {
+            anguloARotar = 0;
+
+            procesador.setInicioY ((int) (cam_altura * 1.0 / 6.0));
+            procesador.setFinY((int) (cam_altura / 2.1 + procesador.getInicioY()));
+
+            procesador.setInicioX((int) (cam_anchura * 2.2 / 6.0));
+            procesador.setFinX((int) (cam_anchura / 2.1 + procesador.getInicioX()));
+
+        } else if (acelerometroY > 6.5) {
+            anguloARotar = 90;
+
+            procesador.setInicioY ((int) (cam_altura * 1.0 / 6.0));
+            procesador.setFinY ( (int) (cam_altura / 2.1 + procesador.getInicioY()));
+
+            procesador.setInicioX ((int) (cam_anchura * 1.0 / 6.0));
+            procesador.setFinX((int) (cam_anchura / 2.1 + procesador.getInicioX()));
+
+        } else if (acelerometroX < -6.5) {
+            anguloARotar = -180;
+
+            procesador.setInicioY ((int) (cam_altura * 2.1 / 6.0));
+            procesador.setFinY ((int) (cam_altura / 2.1 + procesador.getInicioY()));
+
+            procesador.setInicioX  ((int) (cam_anchura * 1.0 / 6.0));
+            procesador.setFinX ((int) (cam_anchura / 2.1 + procesador.getInicioX()));
+
+        } else if (acelerometroY < -6.5) {
+            anguloARotar = -90;
+
+            procesador.setInicioY ((int) (cam_altura * 2.2 / 6.0));
+            procesador.setFinY((int) (cam_altura / 2.1 + procesador.getInicioY()));
+
+            procesador.setInicioX((int) (cam_anchura * 2.2 / 6.0));
+            procesador.setFinX((int) (cam_anchura / 2.1 + procesador.getInicioX()));
+        } else {
+            anguloARotar = 0;
+
+            procesador.setInicioY((int) (cam_altura * 1.0 / 6.0));
+            procesador.setFinY((int) (cam_altura / 2.1 + procesador.getInicioY()));
+
+            procesador.setInicioX((int) (cam_anchura * 2.2 / 6.0));
+            procesador.setFinX((int) (cam_anchura / 2.1 + procesador.getInicioX()));
+        }
+        if (procesador != null) {
+            if (tipoEntrada == 0)
+                procesador.setAnguloARotar(anguloARotar);
+            else
+                procesador.setAnguloARotar(0);
+
+        }
     }
 
     public interface ObserverVelocity {
@@ -251,23 +251,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
         OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION, this,
                 this);
 
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            // TODO: Consider calling
-            //    ActivityCompat#requestPermissions
-            // here to request the missing permissions, and then overriding
-            //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
-            //                                          int[] grantResults)
-            // to handle the case where the user grants the permission. See the documentation
-            // for ActivityCompat#requestPermissions for more details.
-            return;
-        }
-        if (locationManager != null) {
-            Location lastKnownLocation = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
 
-            speed = (lastKnownLocation != null) ? lastKnownLocation.getSpeed() * 3.6f : 0.0f;
-            this.updateSpeed(speed, 0);
-            locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, TIEMPO_MIN, DISTANCIA_MIN, this);
-        }
     }
 
     @Override
@@ -322,6 +306,25 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
         });
         calculaCoordenadasZoom();
 
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            // TODO: Consider calling
+            //    ActivityCompat#requestPermissions
+            // here to request the missing permissions, and then overriding
+            //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
+            //                                          int[] grantResults)
+            // to handle the case where the user grants the permission. See the documentation
+            // for ActivityCompat#requestPermissions for more details.
+            return;
+        }
+        if (locationManager != null) {
+            Location lastKnownLocation = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
+
+            speed = (lastKnownLocation != null) ? lastKnownLocation.getSpeed() * 3.6f : 0.0f;
+            this.updateSpeed(speed, 0);
+            locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, TIEMPO_MIN, DISTANCIA_MIN, this);
+        }
+
+        initListenersOrientation();
 
         PreferenceManager.setDefaultValues(this, R.xml.preferencias, false);
         SharedPreferences preferencias = PreferenceManager.getDefaultSharedPreferences(this);
@@ -534,12 +537,13 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
         if (locationManager != null)
             locationManager.removeUpdates(this);
 
-        initListenersOrientation();
+        mSensorManager.unregisterListener(this);
+
     }
 
     private void initListenersOrientation() {
         mSensorManager.registerListener(this, accelerometer, SensorManager.SENSOR_DELAY_FASTEST);
-        mSensorManager.registerListener(this, magnetometer, SensorManager.SENSOR_DELAY_FASTEST);
+//        mSensorManager.registerListener(this, magnetometer, SensorManager.SENSOR_DELAY_FASTEST);
     }
 
     @Override
