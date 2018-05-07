@@ -20,16 +20,22 @@
         android:textColor="@android:color/white"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_gravity="right"
-        android:layout_marginRight="5dp"
+        android:layout_gravity="center_vertical"
+        android:layout_marginRight="25dp"
         android:text="" />
 
-    <TextView
-        android:id="@+id/txtCurrentaLastSpeedRed"
-        android:textColor="@android:color/white"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="right"
-        android:text="" />
+    <ImageView
+        android:layout_width="30dp"
+        android:layout_height="30dp"
+
+        android:background="@drawable/unknown"
+        android:id="@+id/txtCurrentaLastSpeedRed" />
+    <!--<TextView-->
+        <!--android:id="@+id/txtCurrentaLastSpeedRed"-->
+        <!--android:textColor="@android:color/white"-->
+        <!--android:layout_width="wrap_content"-->
+        <!--android:layout_height="wrap_content"-->
+        <!--android:layout_gravity="right"-->
+        <!--android:text="" />-->
 </LinearLayout>
 </FrameLayout>

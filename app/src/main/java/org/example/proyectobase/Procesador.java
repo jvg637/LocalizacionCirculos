@@ -397,10 +397,7 @@ public class Procesador {
                     digito.release();
                 }
 
-                if (mostrarSalida == Salida.SEGMENTACION_CIRCULO) {
-                    dibujaCirculosEncontratos(salidaBinarizacionPreproceso, rectCirculo);
-                    dibujaDigitosEncontrados(salidaBinarizacionPreproceso, rectDigits,rectCirculo);
-                }
+
                 // Dibuja los circulos encontrados en rojo
 //                dibujaCirculosEncontratos(salida, rectCirculo);
                 // Dibuja Digitos candidatos
@@ -424,7 +421,17 @@ public class Procesador {
                             posVelocidadMin = posActual;
                         }
                     }
+
+                    if (mostrarSalida == Salida.SEGMENTACION_CIRCULO) {
+                        dibujaDigitosEncontrados(circulo, rectDigits);
+                        circulo = rotate(circulo, anguloARotar);
+                        Mat aux = salidaBinarizacionPreproceso.submat(rectCirculo);
+                        circulo.copyTo(aux);
+                        dibujaCirculosEncontratos(salidaBinarizacionPreproceso, rectCirculo);
+                    }
                 }
+
+
             }
             circulo.release();
             posActual++;
@@ -503,20 +510,18 @@ public class Procesador {
         Log.d("DEBUG", txt);
     }
 
-    private void dibujaDigitosEncontrados(Mat salida, List<Rect> rectDigits, Rect rectCirculo) {
-        for (Rect rectCirculoAux : rectDigits) {
-            Point P1 = rectCirculoAux.tl();
-            P1.x+=rectCirculo.x;
-            P1.y+=rectCirculo.y;
-            Point P2 = rectCirculoAux.br();
-            P2.x+=rectCirculo.x;
-            P2.y+=rectCirculo.y;
+    private void dibujaDigitosEncontrados(Mat salida, List<Rect> rectDigits) {
+        for (Rect rectDigit : rectDigits) {
+            Point P1 = rectDigit.tl();
+            Point P2 = rectDigit.br();
             Imgproc.rectangle(salida, P1, P2, new Scalar(0, 255, 0));
         }
     }
 
     private void dibujaCirculosEncontratos(Mat salida, Rect rectCirculo) {
-        Imgproc.rectangle(salida, rectCirculo.tl(), rectCirculo.br(), new Scalar(0, 0, 255));
+        Point P1 = rectCirculo.tl();
+        Point P2 = rectCirculo.br();
+            Imgproc.rectangle(salida, P1, P2, new Scalar(0, 0, 255));
     }
 
     private void localizarCirculos(Mat binaria, List<Rect> rectCirculos) {

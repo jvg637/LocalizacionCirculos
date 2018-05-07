@@ -28,6 +28,7 @@ import android.view.MenuItem;
 import android.view.MotionEvent;
 import android.view.SubMenu;
 import android.view.WindowManager;
+import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -135,7 +136,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
         void actualizaVelocidadLeida(int velocidad);
     }
 
-    private final long TIEMPO_MIN = 10 * 5000; // 5 segundos
+    private final long TIEMPO_MIN = 5000; // 5 segundos
     private final long DISTANCIA_MIN = 5; // 5 metros
     private LocationManager locationManager;
 
@@ -159,7 +160,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
     public static boolean aumentoLineal = false;
     private boolean imagenColor = true;
     private TextView txtCurrentSpeed;
-    private TextView txtCurrentaLastSpeedRed;
+    private ImageView txtCurrentaLastSpeedRed;
 
     @Override
     public void onSaveInstanceState(Bundle savedInstanceState) {
@@ -185,7 +186,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
 //        View contenedor = (View) findViewById(R.id.contenedor);
 //        registerForContextMenu(contenedor);
         txtCurrentSpeed = (TextView) this.findViewById(R.id.txtCurrentSpeed);
-        txtCurrentaLastSpeedRed = (TextView) this.findViewById(R.id.txtCurrentaLastSpeedRed);
+        txtCurrentaLastSpeedRed = (ImageView) this.findViewById(R.id.txtCurrentaLastSpeedRed);
 
         locationManager = (LocationManager) this.getSystemService(Context.LOCATION_SERVICE);
 
@@ -663,25 +664,20 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
         }
     }
 
-
     @Override
     public void onProviderDisabled(String provider) {
-
     }
 
     @Override
     public void onProviderEnabled(String provider) {
-
     }
 
     @Override
     public void onStatusChanged(String provider, int status, Bundle extras) {
-
     }
 
     @Override
     public void onGpsStatusChanged(int event) {
-
     }
 
 //    @Override
@@ -705,14 +701,52 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
         txtCurrentSpeed.post(new Runnable() {
             @Override
             public void run() {
-                txtCurrentSpeed.setText(String.format("% 4.1f", speed) + " " + strUnits);
+                txtCurrentSpeed.setText(String.format("Vel:% 4.1f", speed) + " " + strUnits);
             }
         });
 
         txtCurrentaLastSpeedRed.post(new Runnable() {
             @Override
             public void run() {
-                txtCurrentaLastSpeedRed.setText(String.format("% 4d", lastSpeedRed) + " " + strUnits);
+                switch (lastSpeedRed) {
+                    case 10:
+                        txtCurrentaLastSpeedRed.setBackgroundResource(R.drawable.v10);
+                        break;
+                    case 20:
+                        txtCurrentaLastSpeedRed.setBackgroundResource(R.drawable.v20);
+                        break;
+                    case 30:
+                        txtCurrentaLastSpeedRed.setBackgroundResource(R.drawable.v30);
+                        break;
+                    case 40:
+                        txtCurrentaLastSpeedRed.setBackgroundResource(R.drawable.v40);
+                        break;
+                    case 50:
+                        txtCurrentaLastSpeedRed.setBackgroundResource(R.drawable.v50);
+                        break;
+                    case 60:
+                        txtCurrentaLastSpeedRed.setBackgroundResource(R.drawable.v60);
+                        break;
+                    case 70:
+                        txtCurrentaLastSpeedRed.setBackgroundResource(R.drawable.v70);
+                        break;
+                    case 80:
+                        txtCurrentaLastSpeedRed.setBackgroundResource(R.drawable.v80);
+                        break;
+                    case 90:
+                        txtCurrentaLastSpeedRed.setBackgroundResource(R.drawable.v90);
+                        break;
+                    case 100:
+                        txtCurrentaLastSpeedRed.setBackgroundResource(R.drawable.v100);
+                        break;
+                    case 110:
+                        txtCurrentaLastSpeedRed.setBackgroundResource(R.drawable.v110);
+                        break;
+                    case 120:
+                        txtCurrentaLastSpeedRed.setBackgroundResource(R.drawable.v120);
+                        break;
+                }
+//                txtCurrentaLastSpeedRed.set(String.format("% 4d", lastSpeedRed) + " " + strUnits);
             }
         });
     }
