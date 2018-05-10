@@ -21,12 +21,14 @@ import android.os.Environment;
 import android.preference.PreferenceManager;
 import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
+import android.support.v7.widget.PopupMenu;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.MotionEvent;
 import android.view.SubMenu;
+import android.view.View;
 import android.view.WindowManager;
 import android.widget.ImageView;
 import android.widget.TextView;
@@ -49,22 +51,13 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class MainActivity extends AppCompatActivity implements CameraBridgeViewBase.CvCameraViewListener2,
-        LoaderCallbackInterface, LocationListener, GpsStatus.Listener, SensorEventListener {
-
-    float[] mGravity;
-    float[] mGeomagnetic;
-    float orientation[] = new float[3];
-    float pitch;
-    float azimut;
-    float roll;
-
+        LoaderCallbackInterface, LocationListener, GpsStatus.Listener, SensorEventListener, PopupMenu.OnMenuItemClickListener {
 
     //////////////////////////////////////////////////////////////////////////////
     //// ACELEROMETRO. CALCULA ÁNGULO DE ROTACION
     //////////////////////////////////////////////////////////////////////////////
     @Override
     public void onAccuracyChanged(Sensor sensor, int accuracy) {
-
     }
 
     @Override
@@ -77,45 +70,50 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
         acelerometroY = evento.values[1];
         acelerometroZ = evento.values[2];
 
-        int anguloARotar = 0;
+        if (procesador != null) {
+            if (tipoEntrada > 0) {
+                procesador.setAnguloARotar(0);
+                return;
+            }
+        } else return;
 
-        if (acelerometroX > 6.5 || acelerometroZ>6.5) {
-            anguloARotar = 0;
+        if (acelerometroX > 6.5 || acelerometroZ > 6.5) {
+            procesador.setAnguloARotar(0);
 
-            procesador.setInicioY ((int) (cam_altura * 1.0 / 6.0));
+            procesador.setInicioY((int) (cam_altura * 1.0 / 6.0));
             procesador.setFinY((int) (cam_altura / 2.1 + procesador.getInicioY()));
 
             procesador.setInicioX((int) (cam_anchura * 2.2 / 6.0));
             procesador.setFinX((int) (cam_anchura / 2.1 + procesador.getInicioX()));
 
         } else if (acelerometroY > 6.5) {
-            anguloARotar = 90;
+            procesador.setAnguloARotar(90);
 
-            procesador.setInicioY ((int) (cam_altura * 1.0 / 6.0));
-            procesador.setFinY ( (int) (cam_altura / 2.1 + procesador.getInicioY()));
+            procesador.setInicioY((int) (cam_altura * 1.0 / 6.0));
+            procesador.setFinY((int) (cam_altura / 2.1 + procesador.getInicioY()));
 
-            procesador.setInicioX ((int) (cam_anchura * 1.0 / 6.0));
+            procesador.setInicioX((int) (cam_anchura * 1.0 / 6.0));
             procesador.setFinX((int) (cam_anchura / 2.1 + procesador.getInicioX()));
 
         } else if (acelerometroX < -6.5) {
-            anguloARotar = -180;
+            procesador.setAnguloARotar(-180);
 
-            procesador.setInicioY ((int) (cam_altura * 2.1 / 6.0));
-            procesador.setFinY ((int) (cam_altura / 2.1 + procesador.getInicioY()));
+            procesador.setInicioY((int) (cam_altura * 2.1 / 6.0));
+            procesador.setFinY((int) (cam_altura / 2.1 + procesador.getInicioY()));
 
-            procesador.setInicioX  ((int) (cam_anchura * 1.0 / 6.0));
-            procesador.setFinX ((int) (cam_anchura / 2.1 + procesador.getInicioX()));
+            procesador.setInicioX((int) (cam_anchura * 1.0 / 6.0));
+            procesador.setFinX((int) (cam_anchura / 2.1 + procesador.getInicioX()));
 
         } else if (acelerometroY < -6.5) {
-            anguloARotar = -90;
+            procesador.setAnguloARotar(-90);
 
-            procesador.setInicioY ((int) (cam_altura * 2.2 / 6.0));
+            procesador.setInicioY((int) (cam_altura * 2.2 / 6.0));
             procesador.setFinY((int) (cam_altura / 2.1 + procesador.getInicioY()));
 
             procesador.setInicioX((int) (cam_anchura * 2.2 / 6.0));
             procesador.setFinX((int) (cam_anchura / 2.1 + procesador.getInicioX()));
         } else {
-            anguloARotar = 0;
+            procesador.setAnguloARotar(0);
 
             procesador.setInicioY((int) (cam_altura * 1.0 / 6.0));
             procesador.setFinY((int) (cam_altura / 2.1 + procesador.getInicioY()));
@@ -123,14 +121,16 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
             procesador.setInicioX((int) (cam_anchura * 2.2 / 6.0));
             procesador.setFinX((int) (cam_anchura / 2.1 + procesador.getInicioX()));
         }
-        if (procesador != null) {
-            if (tipoEntrada == 0)
-                procesador.setAnguloARotar(anguloARotar);
-            else
-                procesador.setAnguloARotar(0);
 
-        }
     }
+
+    @Override
+    public boolean onMenuItemClick(MenuItem item) {
+        clickMenu(item);
+        return true;
+    }
+
+
 
     public interface ObserverVelocity {
         void actualizaVelocidadLeida(int velocidad);
@@ -140,8 +140,6 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
     private final long DISTANCIA_MIN = 5; // 5 metros
     private LocationManager locationManager;
 
-
-    public static boolean logOn = true;
 
     private static final String TAG = "(MainActivity)";
     private CameraBridgeViewBase cameraView;
@@ -172,8 +170,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
     private float speed = 0.0f;
 
     private SensorManager mSensorManager;
-    private Sensor accelerometer;
-    private Sensor magnetometer;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -200,11 +197,19 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
         }
         cameraView.setCameraIndex(indiceCamara);
 
+        // Inicializa menu contextual
+        popup = new PopupMenu(this, findViewById(R.id.content_main));
+        popup.inflate(R.menu.menu);
+        MenuInflater inflater = popup.getMenuInflater();
+        popup.setOnMenuItemClickListener(this);
+        resolucion = popup.getMenu().findItem(R.id.cambiarResolucion);
+        imagenes = popup.getMenu().findItem(R.id.cambiar_entrada);
+        listarFicherosRaw();
+
         mSensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
-        accelerometer = mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
-        magnetometer = mSensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD);
     }
 
+    PopupMenu popup;
 
     private void listarFicherosRaw() {
         SubMenu subMenu = imagenes.getSubMenu();
@@ -233,16 +238,29 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
 
     private static final int SOLICITUD_PERMISOS = 0;
 
-    void solicitarPermisos() {
-
-        if (ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.CAMERA) ||
-                ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) ||
-                ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.ACCESS_FINE_LOCATION)) {
-            ActivityCompat.requestPermissions(MainActivity.this, new String[]{Manifest.permission.CAMERA, Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.WRITE_EXTERNAL_STORAGE},
-                    SOLICITUD_PERMISOS);
+    private void solicitarPermisos() {
+        if ((ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED)
+                ||
+                (ActivityCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED)
+                ||
+                (ActivityCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED)) {
+            ActivityCompat.requestPermissions(MainActivity.this, new String[]{Manifest.permission.CAMERA, Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.WRITE_EXTERNAL_STORAGE}, SOLICITUD_PERMISOS);
         } else {
             inicializaAplicacion();
         }
+//        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED ||
+//                (ActivityCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) ||
+//                (ActivityCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED)) {
+//            if (ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.CAMERA) && ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) &&
+//                    ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.ACCESS_FINE_LOCATION)
+//                    ) {
+//                ActivityCompat.requestPermissions(MainActivity.this, new String[]{Manifest.permission.CAMERA, Manifest.permission.WRITE_EXTERNAL_STORAGE}, SOLICITUD_PERMISOS);
+//            } else {
+//                ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.CAMERA, Manifest.permission.WRITE_EXTERNAL_STORAGE}, SOLICITUD_PERMISOS);
+//            }
+//        } else {
+//            inicializaAplicacion();
+//        }
     }
 
     private void inicializaAplicacion() {
@@ -333,9 +351,9 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
 
         String valor = preferencias.getString("salida", Procesador.Salida.BINARIZACION_PREPROCESO.name());
         procesador.setMostrarSalida(Procesador.Salida.valueOf(valor));
-//
-//        valor = preferencias.getString("intensidad", Procesador.TipoIntensidad.AUMENTO_LINEAL_CONTRASTE.name());
-//        procesador.setTipoIntensidad(Procesador.TipoIntensidad.valueOf(valor));
+
+        valor = preferencias.getString("intensidad", Procesador.TipoIntensidadPreproceso.AUMENTO_LINEAL_CONTRASTE.name());
+        procesador.setTipoIntensidad(Procesador.TipoIntensidadPreproceso.valueOf(valor));
 
         valor = preferencias.getString("preproceso", Procesador.TipoPreproceso.GRADIENTE_MORFOLOGICO_DILATACION.name());
         procesador.setTipoPreProceso(Procesador.TipoPreproceso.valueOf(valor));
@@ -537,12 +555,26 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
         if (locationManager != null)
             locationManager.removeUpdates(this);
 
-        mSensorManager.unregisterListener(this);
+        if (procesador != null)
+            procesador.getTextSpeechVelocity().getTts().stop();
 
+        if (mSensorManager != null)
+            mSensorManager.unregisterListener(this);
     }
 
+
+    public void mostrarMenuContextual(View view) {
+        popup.show();
+    }
+
+
+
     private void initListenersOrientation() {
-        mSensorManager.registerListener(this, accelerometer, SensorManager.SENSOR_DELAY_FASTEST);
+        List<Sensor> listaSensores = mSensorManager.getSensorList(Sensor.TYPE_ACCELEROMETER);
+        if (!listaSensores.isEmpty()) {
+            Sensor acelerometerSensor = listaSensores.get(0);
+            mSensorManager.registerListener(this, acelerometerSensor, SensorManager.SENSOR_DELAY_UI);
+        }
 //        mSensorManager.registerListener(this, magnetometer, SensorManager.SENSOR_DELAY_FASTEST);
     }
 
@@ -551,15 +583,17 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
         super.onDestroy();
         if (cameraView != null)
             cameraView.disableView();
-
+        // Destruir TextVoicer
+        if (procesador != null)
+            procesador.getTextSpeechVelocity().getTts().shutdown();
     }
 
 
-    @Override
-    public boolean onTouchEvent(MotionEvent event) {
-        openOptionsMenu();
-        return true;
-    }
+//    @Override
+//    public boolean onTouchEvent(MotionEvent event) {
+//        openOptionsMenu();
+//        return true;
+//    }
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
@@ -580,6 +614,11 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
+        clickMenu(item);
+        return true;
+    }
+
+    private void clickMenu(MenuItem item) {
         switch (item.getItemId()) {
             case R.id.cambiarCamara:
                 if (indiceCamara == CameraBridgeViewBase.CAMERA_ID_BACK) {
@@ -587,20 +626,33 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
                 } else indiceCamara = CameraBridgeViewBase.CAMERA_ID_BACK;
                 recreate();
                 break;
+            case R.id.resolucion_1920x1080:
+
+                reiniciarResolucion(1920, 1080);
+                break;
+            case R.id.resolucion_1600x1200:
+
+                reiniciarResolucion(1600, 1200);
+                break;
+            case R.id.resolucion_1280x720:
+
+                reiniciarResolucion(1280, 720);
+                break;
+            case R.id.resolucion_960x720:
+
+                reiniciarResolucion(960, 720);
+                break;
             case R.id.resolucion_800x600:
-                cam_anchura = 800;
-                cam_altura = 600;
-                reiniciarResolucion();
+
+                reiniciarResolucion(800, 600);
                 break;
             case R.id.resolucion_640x480:
-                cam_anchura = 640;
-                cam_altura = 480;
-                reiniciarResolucion();
+
+                reiniciarResolucion(640, 480);
                 break;
             case R.id.resolucion_320x240:
-                cam_anchura = 320;
-                cam_altura = 240;
-                reiniciarResolucion();
+
+                reiniciarResolucion(320, 240);
                 break;
             case R.id.guardar_imagenes:
                 guardarSiguienteImagen = true;
@@ -644,16 +696,18 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
                 Integer.toBinaryString(indiceCamara);
         Toast.makeText(MainActivity.this, msg,
                 Toast.LENGTH_SHORT).show();
-        return true;
     }
 
-    public void reiniciarResolucion() {
-        recargarRecurso = true;
+      public void reiniciarResolucion(int cols, int rows) {
+
+        cam_altura = rows;
+        cam_anchura = cols;
+
         cameraView.disableView();
         cameraView.setMaxFrameSize(cam_anchura, cam_altura);
         cameraView.enableView();
+        recargarRecurso = true;
     }
-
 
     ///////////////////////////////////////////////////////////////////////////////////////////////
 

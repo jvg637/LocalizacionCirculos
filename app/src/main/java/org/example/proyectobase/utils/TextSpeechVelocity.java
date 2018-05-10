@@ -8,7 +8,11 @@ import java.util.Locale;
 
 public class TextSpeechVelocity {
 
-    public TextToSpeech tts;
+    public TextToSpeech getTts() {
+        return tts;
+    }
+
+    private TextToSpeech tts;
 
     public void inicializaVoz(Context context) {
         tts = new TextToSpeech(context, new TextToSpeech.OnInitListener() {

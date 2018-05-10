@@ -11,6 +11,19 @@
         android:title="Cambiar resolucion">
         <menu>
             <item
+                android:id="@+id/resolucion_1920x1080"
+                android:title="1920x1080" />
+            <item
+                android:id="@+id/resolucion_1600x1200"
+                android:title="1600x1200" />
+            <item
+                android:id="@+id/resolucion_1280x720"
+                android:title="1280x720" />
+            <item
+                android:id="@+id/resolucion_960x720"
+                android:title="960x720" />
+
+            <item
                 android:id="@+id/resolucion_800x600"
                 android:title="800x600" />
             <item
@@ -18,31 +31,37 @@
                 android:title="640x480" />
             <item
                 android:id="@+id/resolucion_320x240"
+
                 android:title="320x240" />
         </menu>
+
     </item>
-    <item android:id="@+id/cambiar_entrada"
+    <item
+        android:id="@+id/cambiar_entrada"
         android:icon="@android:drawable/ic_menu_gallery"
         android:title="Cambiar entrada">
         <menu>
-            <item android:id="@+id/entrada_camara"
-                android:title="camara"/>
-            <item android:id="@+id/entrada_fichero1"
-                android:title="fichero1"/>
-            <item android:id="@+id/entrada_fichero2"
-                android:title="fichero2"/>
+            <item
+                android:id="@+id/entrada_camara"
+                android:title="camara" />
+            <item
+                android:id="@+id/entrada_fichero1"
+                android:title="fichero1" />
+            <item
+                android:id="@+id/entrada_fichero2"
+                android:title="fichero2" />
         </menu>
     </item>
-    <item android:id="@+id/guardar_imagenes"
+    <item
+        android:id="@+id/guardar_imagenes"
         android:icon="@android:drawable/ic_menu_gallery"
-        android:title=" Guardar imagenes ">
-    </item>
+        android:title=" Guardar imagenes "></item>
 
     <ListPreference
         android:defaultValue="2"
-        android:key="estabilidad"
         android:entries="@array/numeroLecturas"
         android:entryValues="@array/numeroLecturas"
+        android:key="estabilidad"
         android:summary="Nº Lecturas Correctas para informar velocidad"
         android:title="Nº Lecturas" />
 
@@ -55,19 +74,17 @@
         android:title="Prioridad de Detección" />
     <item
         android:id="@+id/dividir_pantalla"
-        app:actionViewClass="android.widget.CheckBox"
         android:checkable="true"
         android:checked="false"
         android:title=" Dividir Pantalla "
-         />
+        app:actionViewClass="android.widget.CheckBox" />
 
     <item
         android:id="@+id/aumento_lineal"
-        app:actionViewClass="android.widget.CheckBox"
         android:checkable="true"
         android:checked="false"
         android:title=" Aumento Lineal "
-        />
+        app:actionViewClass="android.widget.CheckBox" />
     <item
         android:id="@+id/preferencias"
         android:icon="@android:drawable/ic_menu_preferences"

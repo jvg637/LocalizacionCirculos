@@ -89,28 +89,23 @@ public class ProcesadorIntensidad {
     }
 
     public Mat aumentoLinealContraste(Mat entrada) {
-        int numCanales = entrada.channels();
-
         // Aumento Linear Contraste
         Mat salida;
-        if (numCanales == 1) {
+        if (entrada.channels() == 1) {
             salida = aumentoLinealContraste1Canal(entrada);
         } else {
 
             Mat red = new Mat();
-            Mat redC;
             Mat green = new Mat();
-            Mat greenC = new Mat();
             Mat blue = new Mat();
-            Mat blueC = new Mat();
             Mat alfa = new Mat();
 
             Core.extractChannel(entrada, red, 0);
-            redC = aumentoLinealContraste1Canal(red);
+            Mat redC = aumentoLinealContraste1Canal(red);
             Core.extractChannel(entrada, green, 1);
-            greenC = aumentoLinealContraste1Canal(green);
+            Mat greenC = aumentoLinealContraste1Canal(green);
             Core.extractChannel(entrada, blue, 2);
-            blueC = aumentoLinealContraste1Canal(blue);
+            Mat blueC = aumentoLinealContraste1Canal(blue);
             Core.extractChannel(entrada, alfa, 3);
 
             List<Mat> lstMat = Arrays.asList(redC, greenC, blueC, alfa);
@@ -130,14 +125,61 @@ public class ProcesadorIntensidad {
     }
 
     public Mat ecualizacionHistograma(Mat entrada) {
-        Mat salida = new Mat();
-        Imgproc.equalizeHist(entrada, salida);
+        // Aumento Linear Contraste
+        Mat salida;
+        if (entrada.channels() == 1) {
+            salida = aumentoLinealContraste1Canal(entrada);
+        } else {
+
+            Mat red = new Mat();
+            Mat redC = new Mat();
+            Mat green = new Mat();
+            Mat greenC = new Mat();
+            Mat blue = new Mat();
+            Mat blueC = new Mat();
+            Mat alfa = new Mat();
+
+            Core.extractChannel(entrada, red, 0);
+            Imgproc.equalizeHist(red, redC);
+            Core.extractChannel(entrada, green, 1);
+            Imgproc.equalizeHist(green, greenC);
+            Core.extractChannel(entrada, blue, 2);
+            Imgproc.equalizeHist(blue, blueC);
+            Core.extractChannel(entrada, alfa, 3);
+
+            List<Mat> lstMat = Arrays.asList(redC, greenC, blueC, alfa);
+
+            salida = new Mat();
+
+            Core.merge(lstMat, salida);
+            red.release();
+            blue.release();
+            green.release();
+            alfa.release();
+            redC.release();
+            greenC.release();
+            blueC.release();
+        }
         return salida;
     }
 
     public Mat toGray(Mat entrada) {
         Mat salida = new Mat();
         Imgproc.cvtColor(entrada, salida, Imgproc.COLOR_RGBA2GRAY);
+        return salida;
+    }
+
+    public Mat intensifica(Mat entrada, Procesador.TipoIntensidadPreproceso tipoIntensidad) {
+        Mat salida = null;
+        switch (tipoIntensidad) {
+            case EQUALIZ_HISTOGRAMA:
+                salida = ecualizacionHistograma(entrada);
+                break;
+
+            case AUMENTO_LINEAL_CONTRASTE:
+                salida = aumentoLinealContraste(entrada);
+                break;
+        }
         return salida;
     }
 }

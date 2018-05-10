@@ -30,6 +30,12 @@ public class Procesador {
     private TipoBinarizacion tipoBinarizacionPreProceso;
     private TipoSegmentacionCirculo tipoSegmentacionCirculo;
     private OCRDigito ocrDigito;
+    private TipoIntensidadPreproceso tipoIntensidad;
+
+    public TextSpeechVelocity getTextSpeechVelocity() {
+        return textSpeechVelocity;
+    }
+
     private TextSpeechVelocity textSpeechVelocity;
     private TipoBinarizacion tipoBinarizacionDisco;
     private boolean zoom;
@@ -153,6 +159,10 @@ public class Procesador {
 
     public Salida getMostrarSalida() {
         return mostrarSalida;
+    }
+
+    public void setTipoIntensidad(TipoIntensidadPreproceso tipoIntensidad) {
+        this.tipoIntensidad = tipoIntensidad;
     }
 
 
@@ -309,8 +319,19 @@ public class Procesador {
             entrada = entradaIn.submat(inicioY, finY, inicioX, finX);
         }
 
+        Mat salidaIntensidad;
+        if (tipoIntensidad != TipoIntensidadPreproceso.SIN_PROCESO) {
+            salidaIntensidad = procesadorIntensidad.intensifica(entradaIn, tipoIntensidad);
+        } else {
+            salidaIntensidad = entrada;
+        }
+
         escribeLog("Preproceso=" + tipoPreProceso.name());
-        Mat salidaPreproceso = procesarLocal.preproceso(tipoPreProceso, entrada);
+        Mat salidaPreproceso = procesarLocal.preproceso(tipoPreProceso, salidaIntensidad);
+
+        if (salidaIntensidad != entrada)
+            salidaIntensidad.release();
+
         if (mostrarSalida == Salida.PREPROCESO) {
             Imgproc.cvtColor(salidaPreproceso, salidaPreproceso, Imgproc.COLOR_GRAY2RGBA);
             if (zoom) {
@@ -459,9 +480,11 @@ public class Procesador {
         salidaPreproceso.release();
         salidaBinarizacionPreproceso.release();
         rectCirculos.clear();
+
         if (entrada != entradaIn) {
             entrada.release();
         }
+
 
         return salida;
     }
@@ -521,7 +544,7 @@ public class Procesador {
     private void dibujaCirculosEncontratos(Mat salida, Rect rectCirculo) {
         Point P1 = rectCirculo.tl();
         Point P2 = rectCirculo.br();
-            Imgproc.rectangle(salida, P1, P2, new Scalar(0, 0, 255));
+        Imgproc.rectangle(salida, P1, P2, new Scalar(0, 0, 255));
     }
 
     private void localizarCirculos(Mat binaria, List<Rect> rectCirculos) {
@@ -581,7 +604,8 @@ public class Procesador {
     }
 
 
-    private void segmentarInteriorDisco(Mat color, Rect rectCirculo, List<Rect> rectDigits, TipoSegmentacionCirculo tipoSegmentacionCirculo) {
+    private void segmentarInteriorDisco(Mat color, Rect
+            rectCirculo, List<Rect> rectDigits, TipoSegmentacionCirculo tipoSegmentacionCirculo) {
 
         Mat red = new Mat();
         Mat binaria;
@@ -691,7 +715,8 @@ public class Procesador {
      * @param circulosSalida
      * @param circuloA
      */
-    private void insertarEliminandoCirculosConcentricos(List<Rect> circulosSalida, Rect circuloA) {
+    private void insertarEliminandoCirculosConcentricos(List<Rect> circulosSalida, Rect
+            circuloA) {
         final Point P1A = new Point(circuloA.x, circuloA.y);
         final Point P2A = new Point(circuloA.x + circuloA.width, circuloA.y + circuloA.height);
 
@@ -737,7 +762,8 @@ public class Procesador {
      * @param circulosSalida
      * @param circuloA
      */
-    private void insertarEliminandoRectángulosConcentricos(List<Rect> circulosSalida, Rect circuloA) {
+    private void insertarEliminandoRectángulosConcentricos(List<Rect> circulosSalida, Rect
+            circuloA) {
         final Point P1A = new Point(circuloA.x, circuloA.y);
         final Point P2A = new Point(circuloA.x + circuloA.width, circuloA.y + circuloA.height);
 
