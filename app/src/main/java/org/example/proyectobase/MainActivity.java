@@ -49,12 +49,14 @@ import org.opencv.imgproc.Imgproc;
 import java.io.File;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 public class MainActivity extends AppCompatActivity implements CameraBridgeViewBase.CvCameraViewListener2,
         LoaderCallbackInterface, LocationListener, GpsStatus.Listener, SensorEventListener, PopupMenu.OnMenuItemClickListener {
 
     private final int GRUPO_RESOLUCIONES = 999999;
+    private final int GRUPO_IMAGENES = 888888;
 
     //////////////////////////////////////////////////////////////////////////////
     //// ACELEROMETRO. CALCULA ÁNGULO DE ROTACION
@@ -134,13 +136,12 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
     }
 
 
-
     public interface ObserverVelocity {
         void actualizaVelocidadLeida(int velocidad);
     }
 
     private final long TIEMPO_MIN = 5000; // 5 segundos
-    private final long DISTANCIA_MIN = 5; // 5 metros
+    private final long DISTANCIA_MIN = 1000; // 5000 metros
     private LocationManager locationManager;
 
 
@@ -159,9 +160,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
     boolean recargarRecurso = false;
     private boolean dividirImagen = false;
     public static boolean aumentoLineal = false;
-    private boolean imagenColor = true;
-    private TextView txtCurrentSpeed;
-    private ImageView txtCurrentaLastSpeedRed;
+
 
     @Override
     public void onSaveInstanceState(Bundle savedInstanceState) {
@@ -175,6 +174,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
     private SensorManager mSensorManager;
 
     private List<Camera.Size> mResoluciones;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -201,7 +201,6 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
         cameraView.setCameraIndex(indiceCamara);
 
 
-
         // Inicializa menu contextual
         popup = new PopupMenu(this, findViewById(R.id.content_main));
         popup.inflate(R.menu.menu);
@@ -214,12 +213,19 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
         mSensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
     }
 
-    PopupMenu popup;
 
+    ////////////////////////////////////////////////////////////////////////////////////////////////
+    /// CONFIGURA el menú de opciones con las resoluciones y las imágenes
+    ////////////////////////////////////////////////////////////////////////////////////////////////
+    private PopupMenu popup;
+    private MenuItem resolucion;
+    private MenuItem imagenes;
+
+    // Lista los ficheros Raw (imágenes)
     private void listarFicherosRaw() {
         SubMenu subMenu = imagenes.getSubMenu();
         subMenu.clear();
-        subMenu.add(1, 1, 0, "camara");
+        subMenu.add(GRUPO_IMAGENES, 1, 0, "camara");
         Field[] fields = R.raw.class.getFields();
 
         List<Integer> vector = new ArrayList<>();
@@ -227,13 +233,14 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
 
         for (int count = 0; count < fields.length; count++) {
             Log.i("Raw Asset: ", fields[count].getName());
-            subMenu.add(1, 1, count + 1, "img:" + fields[count].getName());
+            subMenu.add(GRUPO_IMAGENES, 1, count + 1, fields[count].getName());
             try {
                 vector.add(fields[count].getInt(fields[count]));
             } catch (IllegalAccessException e) {
                 e.printStackTrace();
             }
         }
+
         RECURSOS_FICHEROS = new int[vector.size()];
         for (int i = 0; i < vector.size(); i++) {
             RECURSOS_FICHEROS[i] = vector.get(i);
@@ -419,15 +426,12 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
                         RECURSOS_FICHEROS[tipoEntrada]);
                 //Convierte el recurso a una Mat de OpenCV
                 Utils.bitmapToMat(bitmap, imagenRecurso_);
-                Imgproc.resize(imagenRecurso_, imagenRecurso_,
-                        new Size(cam_anchura, cam_altura));
+                Imgproc.resize(imagenRecurso_, imagenRecurso_, new Size(cam_anchura, cam_altura));
                 recargarRecurso = false;
 
 
             }
-            if (!imagenColor && imagenRecurso_.channels() > 1) {
-                Imgproc.cvtColor(imagenRecurso_, imagenRecurso_, Imgproc.COLOR_RGBA2GRAY);
-            }
+
             entrada = imagenRecurso_;
         }
 
@@ -456,8 +460,6 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
                 return entrada;
             entrada.release();
         }
-
-
         return salida;
     }
 
@@ -501,7 +503,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
     private void listModes() {
         SubMenu subMenu = resolucion.getSubMenu();
         subMenu.clear();
-        int cont=0;
+        int cont = 0;
         for (Camera.Size size : mResoluciones) {
             Log.i(TAG, "Available resolution: " + size.width + " " + size.height);
             subMenu.add(GRUPO_RESOLUCIONES, 0, cont++, size.width + "x" + size.height);
@@ -564,12 +566,11 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
     }
 
 
-
     private void initListenersOrientation() {
         List<Sensor> listaSensores = mSensorManager.getSensorList(Sensor.TYPE_ACCELEROMETER);
         if (!listaSensores.isEmpty()) {
             Sensor acelerometerSensor = listaSensores.get(0);
-            mSensorManager.registerListener(this, acelerometerSensor, SensorManager.SENSOR_DELAY_UI);
+            mSensorManager.registerListener(this, acelerometerSensor, SensorManager.SENSOR_DELAY_NORMAL);
         }
 //        mSensorManager.registerListener(this, magnetometer, SensorManager.SENSOR_DELAY_FASTEST);
     }
@@ -584,36 +585,8 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
             procesador.getTextSpeechVelocity().getTts().shutdown();
     }
 
-
-//    @Override
-//    public boolean onTouchEvent(MotionEvent event) {
-//        openOptionsMenu();
-//        return true;
-//    }
-
-//    @Override
-//    public boolean onCreateOptionsMenu(Menu menu) {
-//        super.onCreateOptionsMenu(menu);
-//        MenuInflater inflater = getMenuInflater();
-//        inflater.inflate(R.menu.menu, menu);
-//        resolucion = menu.findItem(R.id.cambiarResolucion);
-//        imagenes = menu.findItem(R.id.cambiar_entrada);
-//
-//        listarFicherosRaw();
-//        return true;
-//    }
-
-    private MenuItem resolucion;
-    private MenuItem imagenes;
-
+    // Controla las opciones del menú
     private boolean guardarSiguienteImagen = false;
-
-//    @Override
-//    public boolean onOptionsItemSelected(MenuItem item) {
-//        clickMenu(item);
-//        return true;
-//    }
-
     private void clickMenu(MenuItem item) {
         switch (item.getItemId()) {
             case R.id.cambiarCamara:
@@ -634,6 +607,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
 
             case R.id.preferencias:
                 Intent i = new Intent(this, Preferencias.class);
+                recargarRecurso = true;
                 startActivity(i);
                 break;
             default:
@@ -642,30 +616,18 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
 
                 if (category == GRUPO_RESOLUCIONES) {
                     reiniciarResolucion(mResoluciones.get(orden));
-                }
-                String titulo = item.getTitle().toString();
-                if (titulo.startsWith("img:")) {
-                    String imagen = item.getTitle().toString().split(":")[1];
+                } else if (category == GRUPO_IMAGENES) {
                     tipoEntrada = item.getOrder();
                     recargarRecurso = true;
-                } else {
-                    if (titulo.startsWith("camara")) {
-                        tipoEntrada = 0;
-                    }
                 }
         }
-        String msg = "W=" + Integer.toString(cam_anchura) + " H= " +
-                Integer.toString(cam_altura) + " Cam= " +
-                Integer.toBinaryString(indiceCamara);
-        Toast.makeText(MainActivity.this, msg,
-                Toast.LENGTH_SHORT).show();
+//        String msg = "W=" + Integer.toString(cam_anchura) + " H= " + Integer.toString(cam_altura) + " Cam= " + Integer.toBinaryString(indiceCamara);
+//        Toast.makeText(MainActivity.this, msg, Toast.LENGTH_SHORT).show();
     }
 
-      public void reiniciarResolucion(Camera.Size size) {
-
+    public void reiniciarResolucion(Camera.Size size) {
         cam_altura = size.height;
         cam_anchura = size.width;
-
         cameraView.disableView();
         cameraView.setMaxFrameSize(cam_anchura, cam_altura);
         cameraView.enableView();
@@ -701,20 +663,10 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
     public void onGpsStatusChanged(int event) {
     }
 
-//    @Override
-//    public boolean onContextItemSelected(MenuItem item) {
-//        AdapterView.AdapterContextMenuInfo info = (AdapterView.AdapterContextMenuInfo) item.getMenuInfo();
-//        switch (item.getItemId()) {
-////            case R.id.edit:
-////                editNote(info.id);
-////                return true;
-////            case R.id.delete:
-////                deleteNote(info.id);
-////                return true;
-//            default:
-//                return super.onContextItemSelected(item);
-//        }
-//    }
+    // Velocidad Actual
+    private TextView txtCurrentSpeed;
+    // Ultima velocidad leida
+    private ImageView txtCurrentaLastSpeedRed;
 
 
     public void updateSpeed(final float speed, final int lastSpeedRed) {
@@ -767,10 +719,9 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
                         txtCurrentaLastSpeedRed.setBackgroundResource(R.drawable.v120);
                         break;
                 }
-//                txtCurrentaLastSpeedRed.set(String.format("% 4d", lastSpeedRed) + " " + strUnits);
             }
         });
     }
 
-    final String strUnits = "km/h";
+    private final String strUnits = "km/h";
 }

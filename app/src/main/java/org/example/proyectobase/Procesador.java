@@ -255,7 +255,7 @@ public class Procesador {
             P2.x += inicioX;
             P2.y += inicioY;
         }
-        Imgproc.rectangle(salida, P1, P2, new Scalar(255, 0, 0));
+        Imgproc.rectangle(salida, P1, P2, new Scalar(0, 255, 0));
 // Escribir numero
         int fontFace = 6;//FONT_HERSHEY_SCRIPT_SIMPLEX;
         double fontScale = 1;
@@ -304,7 +304,7 @@ public class Procesador {
 
         /////////////////////////////////////////////////////////////
         // Salida = entrada
-        escribeLog("Salida=" + mostrarSalida.name());
+//        escribeLog("Salida=" + mostrarSalida.name());
         if (mostrarSalida == Salida.ENTRADA) {
             Mat salida = entradaIn.clone();
             if (zoom) {
@@ -319,7 +319,7 @@ public class Procesador {
             entrada = entradaIn.submat(inicioY, finY, inicioX, finX);
         }
 
-        escribeLog("Preproceso=" + tipoPreProceso.name());
+//        escribeLog("Preproceso=" + tipoPreProceso.name());
         Mat salidaPreproceso = procesarLocal.preproceso(tipoPreProceso, tipoIntensidad, entrada);
 
         if (mostrarSalida == Salida.PREPROCESO) {
@@ -331,7 +331,7 @@ public class Procesador {
             Imgproc.resize(salidaPreproceso, salidaPreproceso, new Size(cam_anchura, cam_altura));
             return salidaPreproceso;
         }
-        escribeLog("Binarizacion Preproceso=" + tipoBinarizacionPreProceso.name());
+//        escribeLog("Binarizacion Preproceso=" + tipoBinarizacionPreProceso.name());
         Mat salidaBinarizacionPreproceso = procesarBinarizacion.binarizacionPreproceso(tipoBinarizacionPreProceso, salidaPreproceso);
         if (mostrarSalida == Salida.BINARIZACION_PREPROCESO) {
             Imgproc.cvtColor(salidaBinarizacionPreproceso, salidaBinarizacionPreproceso, Imgproc.COLOR_GRAY2RGBA);
@@ -384,20 +384,7 @@ public class Procesador {
             if (rectDigits.size() >= 2 && rectDigits.size() <= 3) {
                 for (Rect rectDigito : rectDigits) {
                     Mat digito = circulo.submat(rectDigito);
-//                    if (anguloARotar != 0)
-//                        digito = rotate(digito, -anguloARotar);
-
-//                    if (zoom) {
-//                        Imgproc.rectangle(digito, new Point(0, 0), new Point(salidaBinarizacionPreproceso.width() - 1, salidaPreproceso.height() - 1), new Scalar(0, 0, 255), 3);
-//                        entrada.release();
-//                        Imgproc.resize(digito, digito, new Size(cam_anchura, cam_altura));
-//                        salidaPreproceso.release();
-//                        return digito;
-//                    }
-
-
                     int velocidad = leerDigitoOcr(digito);
-
                     if (velocidad != -1) {
                         velocidadStr += velocidad;
                     } else {
@@ -407,16 +394,7 @@ public class Procesador {
                     }
                     digito.release();
                 }
-
-
-                // Dibuja los circulos encontrados en rojo
-//                dibujaCirculosEncontratos(salida, rectCirculo);
-                // Dibuja Digitos candidatos
-//                dibujaDigitosEncontrados(salida, rectDigits);
-                // Si tengo 2 o 3 digitos, les aplico OCR
-
                 velocidadFinal = Integer.parseInt(velocidadStr);
-
                 if (!velocidadStr.isEmpty()) {
                     if (Arrays.binarySearch(velocidadesEspanya, velocidadStr, comparatorStr) >= 0) {
                         /////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -470,9 +448,7 @@ public class Procesador {
         ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
         salida = entradaIn.clone();
         moduloVisualizacionVelocidad(salida, rectCirculos);
-        if (zoom) {
-            Imgproc.rectangle(salida, new Point(inicioX, inicioY), new Point(finX - 1, finY - 1), new Scalar(0, 0, 255), 3);
-        }
+
         // Libera Memoria
         salidaPreproceso.release();
         salidaBinarizacionPreproceso.release();
@@ -481,8 +457,6 @@ public class Procesador {
         if (entrada != entradaIn) {
             entrada.release();
         }
-
-
         return salida;
     }
 
@@ -504,7 +478,6 @@ public class Procesador {
         }
         // Estabiliza la lectura
         if (numeroVecesLeida >= estabilizacion && posTamanyoMax >= 0) {
-            //////////Log.d("LECTURAS_OK", "VELOCIDAD MAX: " + numeroVecesLeida + " " + velocidad + " TAMAÑO MAX: " + tamanyoMax);
             if (tipoPrioridadDeteccionVelocidad == TipoPrioridadDeteccionVelocidad.VELOCIDAD) {
                 dibujarResultado(salida, rectCirculos.get(posVelocidadMin), velocidad);
             } else {
@@ -518,7 +491,9 @@ public class Procesador {
             }
         }
 
-
+        if (zoom) {
+            Imgproc.rectangle(salida, new Point(inicioX, inicioY), new Point(finX - 1, finY - 1), new Scalar(0, 0, 255), 3);
+        }
     }
 
     private void reiniciaContadorLecturasEstabilizacion() {
