@@ -9,10 +9,13 @@ import org.opencv.imgproc.Imgproc;
 
 public class ProcesadorOperadorLocal {
 
+    private final ProcesadorIntensidad procesadorIntensidad;
     private Mat paso_bajo;
 
     public ProcesadorOperadorLocal() { //Constructor
         paso_bajo = new Mat();
+
+        procesadorIntensidad = new ProcesadorIntensidad();
     }
 
 
@@ -118,20 +121,20 @@ public class ProcesadorOperadorLocal {
 
         Mat Gx = new Mat();
         Mat Gy = new Mat();
-        Imgproc.Sobel( entrada, Gx, CvType.CV_32FC1 , 1, 0);
+        Imgproc.Sobel(entrada, Gx, CvType.CV_32FC1, 1, 0);
         //Derivada primera rto x
-        Imgproc.Sobel( entrada, Gy, CvType.CV_32FC1 , 0, 1);
+        Imgproc.Sobel(entrada, Gy, CvType.CV_32FC1, 0, 1);
         //Derivada primera rto y
         Mat Gx2 = new Mat();
         Mat Gy2 = new Mat();
-        Core.multiply(Gx, Gx , Gx2); //Gx2 = Gx*Gx elemento a elemento
-        Core.multiply(Gy, Gy , Gy2); //Gy2 = Gy*Gy elemento a elemento
+        Core.multiply(Gx, Gx, Gx2); //Gx2 = Gx*Gx elemento a elemento
+        Core.multiply(Gy, Gy, Gy2); //Gy2 = Gy*Gy elemento a elemento
         Mat modGrad2 = new Mat();
-        Core.add( Gx2 , Gy2, modGrad2);
+        Core.add(Gx2, Gy2, modGrad2);
         Mat modGrad = new Mat();
-        Core.sqrt(modGrad2,modGrad);
+        Core.sqrt(modGrad2, modGrad);
 
-        modGrad.convertTo( salida, CvType.CV_8UC1);
+        modGrad.convertTo(salida, CvType.CV_8UC1);
 
         Gx.release();
         Gy.release();
@@ -143,33 +146,40 @@ public class ProcesadorOperadorLocal {
         return salida;
     }
 
-    public Mat filtroSobelGreen(Mat entrada) {
+    public Mat filtroSobelGreen(Mat entrada, Procesador.TipoIntensidad tipoIntensidad) {
 
         if (entrada.channels() == 1) {
             return entrada.clone();
         }
 
         Mat salida = new Mat();
-
-        Mat entradaG = new Mat();
-        Core.extractChannel(entrada, entradaG, 1);
+        Mat entradaG;
+        if (tipoIntensidad != Procesador.TipoIntensidad.SIN_PROCESO) {
+            Mat entradaI = new Mat();
+            Core.extractChannel(entrada, entradaI, 1);
+            entradaG = procesadorIntensidad.intensifica(entradaI, tipoIntensidad);
+            entradaI.release();
+        } else {
+            entradaG = new Mat();
+            Core.extractChannel(entrada, entradaG, 1);
+        }
 
         Mat Gx = new Mat();
         Mat Gy = new Mat();
-        Imgproc.Sobel( entradaG, Gx, CvType.CV_32FC1 , 1, 0);
+        Imgproc.Sobel(entradaG, Gx, CvType.CV_32FC1, 1, 0);
         //Derivada primera rto x
-        Imgproc.Sobel( entradaG, Gy, CvType.CV_32FC1 , 0, 1);
+        Imgproc.Sobel(entradaG, Gy, CvType.CV_32FC1, 0, 1);
         //Derivada primera rto y
         Mat Gx2 = new Mat();
         Mat Gy2 = new Mat();
-        Core.multiply(Gx, Gx , Gx2); //Gx2 = Gx*Gx elemento a elemento
-        Core.multiply(Gy, Gy , Gy2); //Gy2 = Gy*Gy elemento a elemento
+        Core.multiply(Gx, Gx, Gx2); //Gx2 = Gx*Gx elemento a elemento
+        Core.multiply(Gy, Gy, Gy2); //Gy2 = Gy*Gy elemento a elemento
         Mat modGrad2 = new Mat();
-        Core.add( Gx2 , Gy2, modGrad2);
+        Core.add(Gx2, Gy2, modGrad2);
         Mat modGrad = new Mat();
-        Core.sqrt(modGrad2,modGrad);
+        Core.sqrt(modGrad2, modGrad);
 
-        modGrad.convertTo( salida, CvType.CV_8UC1);
+        modGrad.convertTo(salida, CvType.CV_8UC1);
 
         Gx.release();
         Gy.release();
@@ -181,7 +191,7 @@ public class ProcesadorOperadorLocal {
         return salida;
     }
 
-    public Mat filtroSobelRed(Mat entrada) {
+    public Mat filtroSobelRed(Mat entrada, Procesador.TipoIntensidad tipoIntensidad) {
 
         if (entrada.channels() == 1) {
             return entrada.clone();
@@ -189,25 +199,33 @@ public class ProcesadorOperadorLocal {
 
         Mat salida = new Mat();
 
-        Mat entradaG = new Mat();
-        Core.extractChannel(entrada, entradaG, 0);
+        Mat entradaG;
 
+        if (tipoIntensidad != Procesador.TipoIntensidad.SIN_PROCESO) {
+            Mat entradaI = new Mat();
+            Core.extractChannel(entrada, entradaI, 0);
+            entradaG = procesadorIntensidad.intensifica(entradaI, tipoIntensidad);
+            entradaI.release();
+        } else {
+            entradaG = new Mat();
+            Core.extractChannel(entrada, entradaG, 0);
+        }
         Mat Gx = new Mat();
         Mat Gy = new Mat();
-        Imgproc.Sobel( entradaG, Gx, CvType.CV_32FC1 , 1, 0);
+        Imgproc.Sobel(entradaG, Gx, CvType.CV_32FC1, 1, 0);
         //Derivada primera rto x
-        Imgproc.Sobel( entradaG, Gy, CvType.CV_32FC1 , 0, 1);
+        Imgproc.Sobel(entradaG, Gy, CvType.CV_32FC1, 0, 1);
         //Derivada primera rto y
         Mat Gx2 = new Mat();
         Mat Gy2 = new Mat();
-        Core.multiply(Gx, Gx , Gx2); //Gx2 = Gx*Gx elemento a elemento
-        Core.multiply(Gy, Gy , Gy2); //Gy2 = Gy*Gy elemento a elemento
+        Core.multiply(Gx, Gx, Gx2); //Gx2 = Gx*Gx elemento a elemento
+        Core.multiply(Gy, Gy, Gy2); //Gy2 = Gy*Gy elemento a elemento
         Mat modGrad2 = new Mat();
-        Core.add( Gx2 , Gy2, modGrad2);
+        Core.add(Gx2, Gy2, modGrad2);
         Mat modGrad = new Mat();
-        Core.sqrt(modGrad2,modGrad);
+        Core.sqrt(modGrad2, modGrad);
 
-        modGrad.convertTo( salida, CvType.CV_8UC1);
+        modGrad.convertTo(salida, CvType.CV_8UC1);
 
         Gx.release();
         Gy.release();
@@ -221,26 +239,24 @@ public class ProcesadorOperadorLocal {
 
 
     public Mat residuoGradienteDilatacion(Mat entrada, double tam) {
-        if (entrada.channels() > 1) {
-            return entrada.clone();
-        }
-
-//        double tam = 3;
+   //        double tam = 3;
 //        double tam = 11;
+        // Gradiente Morfológico (gris)
+        // LUMINANCIA
+
+        Mat SE = Imgproc.getStructuringElement(Imgproc.MORPH_RECT, new Size(tam, tam));
+
+        Mat gray_dilation = new Mat();
+        Imgproc.dilate(entrada, gray_dilation, SE); // tamxtam dilation
+
         Mat salida = new Mat();
-
-        Mat SE = Imgproc.getStructuringElement(Imgproc.MORPH_RECT, new Size(tam,tam));
-        Mat gray_dilation = new Mat(); // Result
-//        Mat gray_erosion = new Mat(); // Result
-        Imgproc.dilate(entrada, gray_dilation, SE ); // 3x3 dilation
-//        Imgproc.erode(entrada, gray_erosion, SE ); // 3x3 erosion
-
         Core.subtract(gray_dilation, entrada, salida);
-//        Core.subtract(entrada, gray_erosion, erosion_residue);
-
-        gray_dilation.release();
         SE.release();
 
+
+
+        gray_dilation.release();
         return salida;
+
     }
 }

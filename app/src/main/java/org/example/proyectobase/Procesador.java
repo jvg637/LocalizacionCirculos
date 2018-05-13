@@ -30,7 +30,7 @@ public class Procesador {
     private TipoBinarizacion tipoBinarizacionPreProceso;
     private TipoSegmentacionCirculo tipoSegmentacionCirculo;
     private OCRDigito ocrDigito;
-    private TipoIntensidadPreproceso tipoIntensidad;
+    private TipoIntensidad tipoIntensidad;
 
     public TextSpeechVelocity getTextSpeechVelocity() {
         return textSpeechVelocity;
@@ -161,7 +161,7 @@ public class Procesador {
         return mostrarSalida;
     }
 
-    public void setTipoIntensidad(TipoIntensidadPreproceso tipoIntensidad) {
+    public void setTipoIntensidad(TipoIntensidad tipoIntensidad) {
         this.tipoIntensidad = tipoIntensidad;
     }
 
@@ -175,7 +175,7 @@ public class Procesador {
 
     public enum TipoEstrategiaPreproceso {COLOR, BLANCO_Y_NEGRO, MIXTO}
 
-    public enum TipoIntensidadPreproceso {SIN_PROCESO, LUMINANCIA, AUMENTO_LINEAL_CONTRASTE, EQUALIZ_HISTOGRAMA}
+    public enum TipoIntensidad {SIN_PROCESO, LUMINANCIA, AUMENTO_LINEAL_CONTRASTE, EQUALIZ_HISTOGRAMA}
 
     public enum TipoBinarizacion {SIN_PROCESO, ADAPTATIVA, MEDIA, OTSU_INV, MAXIMO}
 
@@ -192,9 +192,6 @@ public class Procesador {
     private ProcesadorPreproceso procesarLocal;
     private ProcesadorIntensidad procesadorIntensidad;
 
-
-    Mat salida_mitad_izquierda = null;
-    Mat entrada_mitad_izquierda = null;
 
     Mat binaria1;
     Mat entrada_gris;
@@ -225,6 +222,14 @@ public class Procesador {
         }
     };
 
+    // Función principal encargada de la detección de la señal y lectura de la velocidad detectada
+    // Fases:
+    //  1) Preproceso
+    //  2) Binarización Preproceso
+    //  3) Localización de Círculos
+    //  4) Segmentación de circulos encontrados
+    //  5) Aplicar Ocr a los dígitos
+    //  6) Mostrar resultado en salida (pantalla y vox)
     public Procesador(Context context, MainActivity.ObserverVelocity observerVelocity) {
         this.observerVelocity = observerVelocity;
         procesarLocal = new ProcesadorPreproceso(TipoEstrategiaPreproceso.MIXTO);
@@ -235,43 +240,14 @@ public class Procesador {
         textSpeechVelocity.inicializaVoz(context);
         // Ordena el vector de velocidades permitidas en España
         Arrays.sort(velocidadesEspanya, comparatorStr);
-
-        salida_mitad_izquierda = new Mat();
-        entrada_mitad_izquierda = new Mat();
-
         binaria1 = new Mat();
         entrada_gris = new Mat();
-
     } //Constructor
 
-
-    void dibujarResultado(Mat salida, Rect rectCirculo, int digit) {
-        Point P1 = rectCirculo.tl();
-        Point P2 = rectCirculo.br();
-
-        if (zoom) {
-            P1.x += inicioX;
-            P1.y += inicioY;
-            P2.x += inicioX;
-            P2.y += inicioY;
-        }
-        Imgproc.rectangle(salida, P1, P2, new Scalar(0, 255, 0));
-// Escribir numero
-        int fontFace = 6;//FONT_HERSHEY_SCRIPT_SIMPLEX;
-        double fontScale = 1;
-        int thickness = 5;
-        Imgproc.putText(salida, String.valueOf(digit),
-                P1, fontFace, fontScale,
-                new Scalar(0, 0, 0), thickness, 8, false);
-        Imgproc.putText(salida, String.valueOf(digit),
-                P1, fontFace, fontScale,
-                new Scalar(255, 255, 255), thickness / 2, 8, false);
-    }
 
     // Variables para la estabilidad de las tomas
     private int lecturaVelocidadAnterior = -1;
     private int numeroVecesLeida = 0;
-
 
     // Control de circulo MAX
     int tamanyoMax = -1;
@@ -306,13 +282,16 @@ public class Procesador {
         // Salida = entrada
 //        escribeLog("Salida=" + mostrarSalida.name());
         if (mostrarSalida == Salida.ENTRADA) {
-            Mat salida = entradaIn.clone();
+//           Mat salida = entradaIn.clone();
             if (zoom) {
-                Imgproc.rectangle(salida, new Point(inicioX, inicioY), new Point(finX - 1, finY - 1), new Scalar(0, 0, 255), 3);
+                Imgproc.rectangle(entradaIn, new Point(inicioX, inicioY), new Point(finX - 1, finY - 1), new Scalar(0, 0, 255), 3);
             }
-            return salida;
+            return entradaIn;
         }
+
+        /////////////////////////////////////////////////////////////
         // Comprueba si está activazo el ZOOM
+        /////////////////////////////////////////////////////////////
         if (!zoom) {
             entrada = entradaIn;
         } else {
@@ -320,6 +299,9 @@ public class Procesador {
         }
 
 //        escribeLog("Preproceso=" + tipoPreProceso.name());
+        /////////////////////////////////////////////////////////////
+        // Preproceso
+        /////////////////////////////////////////////////////////////
         Mat salidaPreproceso = procesarLocal.preproceso(tipoPreProceso, tipoIntensidad, entrada);
 
         if (mostrarSalida == Salida.PREPROCESO) {
@@ -328,9 +310,14 @@ public class Procesador {
                 Imgproc.rectangle(salidaPreproceso, new Point(0, 0), new Point(salidaPreproceso.width() - 1, salidaPreproceso.height() - 1), new Scalar(0, 0, 255), 3);
                 entrada.release();
             }
+            entradaIn.release();
             Imgproc.resize(salidaPreproceso, salidaPreproceso, new Size(cam_anchura, cam_altura));
             return salidaPreproceso;
         }
+
+        /////////////////////////////////////////////////////////////
+        // Binarización
+        /////////////////////////////////////////////////////////////
 //        escribeLog("Binarizacion Preproceso=" + tipoBinarizacionPreProceso.name());
         Mat salidaBinarizacionPreproceso = procesarBinarizacion.binarizacionPreproceso(tipoBinarizacionPreProceso, salidaPreproceso);
         if (mostrarSalida == Salida.BINARIZACION_PREPROCESO) {
@@ -342,6 +329,7 @@ public class Procesador {
             Imgproc.resize(salidaBinarizacionPreproceso, salidaBinarizacionPreproceso, new Size(cam_anchura, cam_altura));
 
             salidaPreproceso.release();
+            entradaIn.release();
             return salidaBinarizacionPreproceso;
         }
 
@@ -356,6 +344,7 @@ public class Procesador {
                 entrada.release();
             }
             salidaPreproceso.release();
+            entradaIn.release();
             Imgproc.resize(salidaBinarizacionPreproceso, salidaBinarizacionPreproceso, new Size(cam_anchura, cam_altura));
             return salidaBinarizacionPreproceso;
         }
@@ -417,7 +406,8 @@ public class Procesador {
 
                         Imgproc.cvtColor(circuloBinario, circuloBinario, Imgproc.COLOR_GRAY2RGBA);
                         dibujaDigitosEncontrados(circuloBinario, rectDigits);
-                        circulo = rotate(circuloBinario, anguloARotar);
+                        if (anguloARotar != 0)
+                            circuloBinario = rotate(circuloBinario, anguloARotar);
 
                         Mat aux = salidaBinarizacionPreproceso.submat(rectCirculo);
                         circuloBinario.copyTo(aux);
@@ -439,6 +429,7 @@ public class Procesador {
                 entrada.release();
             }
             salidaPreproceso.release();
+            entradaIn.release();
             Imgproc.resize(salidaBinarizacionPreproceso, salidaBinarizacionPreproceso, new Size(cam_anchura, cam_altura));
             return salidaBinarizacionPreproceso;
         }
@@ -446,7 +437,12 @@ public class Procesador {
         /// 7. MODULO DE VISUALIZACION DE LA SEÑAL SEGÚN PRIORIDAD SELECCIONADA EN PREFERENCIAS.
         ///    TAMBIÉN INCLUYE ESTABILIDAD
         ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-        salida = entradaIn.clone();
+
+//        if (!guardarSiguienteImagen)
+        salida = entradaIn;
+//        else
+//            salida = entradaIn.clone();
+
         moduloVisualizacionVelocidad(salida, rectCirculos);
 
         // Libera Memoria
@@ -501,10 +497,14 @@ public class Procesador {
         numeroVecesLeida = 0;
     }
 
+
+    // Funciones de salida
+    // Log
     private void escribeLog(String txt) {
         Log.d("DEBUG", txt);
     }
 
+    // Dibujar los dígitos encontrados
     private void dibujaDigitosEncontrados(Mat salida, List<Rect> rectDigits) {
         for (Rect rectDigit : rectDigits) {
             Point P1 = rectDigit.tl();
@@ -513,28 +513,51 @@ public class Procesador {
         }
     }
 
+
+    //////////////////////////////////////////////////////////////////////////////////////////////////
+    // Dibuja velocidad localizada
+    //////////////////////////////////////////////////////////////////////////////////////////////////
+    void dibujarResultado(Mat salida, Rect rectCirculo, int digit) {
+        Point P1 = rectCirculo.tl();
+        Point P2 = rectCirculo.br();
+        if (zoom) {
+            P1.x += inicioX;
+            P1.y += inicioY;
+            P2.x += inicioX;
+            P2.y += inicioY;
+        }
+        Imgproc.rectangle(salida, P1, P2, new Scalar(0, 255, 0));
+// Escribir numero
+        int fontFace = 6;//FONT_HERSHEY_SCRIPT_SIMPLEX;
+        double fontScale = 1;
+        int thickness = 5;
+        Imgproc.putText(salida, String.valueOf(digit),
+                P1, fontFace, fontScale,
+                new Scalar(0, 0, 0), thickness, 8, false);
+        Imgproc.putText(salida, String.valueOf(digit),
+                P1, fontFace, fontScale,
+                new Scalar(255, 255, 255), thickness / 2, 8, false);
+    }
+
     private void dibujaCirculosEncontratos(Mat salida, Rect rectCirculo) {
         Point P1 = rectCirculo.tl();
         Point P2 = rectCirculo.br();
         Imgproc.rectangle(salida, P1, P2, new Scalar(0, 0, 255));
     }
 
+    //////////////////////////////////////////////////////////////////////////////////////////////////
+    // 4) Localiza círculos en la señal binarizada
+    //////////////////////////////////////////////////////////////////////////////////////////////////
     private void localizarCirculos(Mat binaria, List<Rect> rectCirculos) {
-        if (binaria.channels() > 1)
-            return;
-
         List<MatOfPoint> blobs = new ArrayList<>();
         Mat hierarchy = new Mat();
-
         Imgproc.findContours(binaria, blobs, hierarchy, Imgproc.RETR_CCOMP,
                 Imgproc.CHAIN_APPROX_NONE);
-//        int minimumHeight = 30;
-        int minimumHeight = 25;
+        int minimumHeight = 30;
+//        int minimumHeight = 25;
         float maxratio = (float) 0.75;
         // Relacion circurferencia
         double maxRatioCircurferencia = 0.75;
-
-
         // Seleccionar candidatos a circulos
         for (int c = 0; c < blobs.size(); c++) {
             double[] data = hierarchy.get(0, c);
@@ -558,24 +581,21 @@ public class Procesador {
             if (binaria.width() - (BB.x + BB.width) < 3 || binaria.height() -
                     (BB.y + BB.height) < 3)
                 continue;
-
             // Comprueba que es un círculo
             double ratioCircurferencia = Math.abs(minMaxDistanceRatio(blobs.get(c)));
             if (ratioCircurferencia < maxRatioCircurferencia || ratioCircurferencia > 1.0 / maxRatioCircurferencia)
                 continue;
-
             // Aqui cumple todos los criterios. Comprobamos circulos concéntricos
             insertarEliminandoCirculosConcentricos(rectCirculos, BB);
-
         } // for
-
         blobs.clear();
         hierarchy.release();
-
         return;
     }
 
-
+    //////////////////////////////////////////////////////////////////////////////////////////////////
+    // 5) Segmenta el interior del disc para localizar los dígitos que contine
+    //////////////////////////////////////////////////////////////////////////////////////////////////
     private void segmentarInteriorDisco(Mat color, Rect
             rectCirculo, List<Rect> rectDigits, TipoSegmentacionCirculo tipoSegmentacionCirculo) {
 
@@ -583,14 +603,13 @@ public class Procesador {
         Mat binaria;
         Mat paNeg = new Mat();
 
-
         switch (tipoSegmentacionCirculo) {
             case SIN_PROCESO:
                 return;
             case COMPONENTE_ROJA:
                 Core.extractChannel(color, red, 0);
                 Mat gray;
-                if (tipoIntensidad != TipoIntensidadPreproceso.SIN_PROCESO) {
+                if (tipoIntensidad != TipoIntensidad.SIN_PROCESO) {
                     gray = procesadorIntensidad.intensifica(red, tipoIntensidad);
                 } else {
                     gray = red;
@@ -611,10 +630,9 @@ public class Procesador {
         Mat hierarchy = new Mat();
 
 
-        Imgproc.findContours(binaria, blobs, hierarchy, Imgproc.RETR_CCOMP,
-                Imgproc.CHAIN_APPROX_NONE);
-        //        int minimumHeight = 12;
-        int minimumHeight = 8;
+        Imgproc.findContours(binaria, blobs, hierarchy, Imgproc.RETR_CCOMP, Imgproc.CHAIN_APPROX_NONE);
+        int minimumHeight = 12;
+//        int minimumHeight = 8;
 
         // Seleccionar candidatos a circulos
         for (
@@ -775,7 +793,6 @@ public class Procesador {
     void mitadMitad(Mat entrada, Mat salida) {
         if (entrada.channels() > salida.channels()) {
             Imgproc.cvtColor(salida, salida, Imgproc.COLOR_GRAY2RGBA);
-
         }
         if (entrada.channels() < salida.channels())
             Imgproc.cvtColor(entrada, entrada, Imgproc.COLOR_GRAY2RGBA);
@@ -786,15 +803,15 @@ public class Procesador {
         mitad_izquierda.height = entrada.height();
         mitad_izquierda.width = entrada.width() / 2;
 
-        if (entrada_mitad_izquierda != null)
-            entrada_mitad_izquierda.release();
-
-        if (salida_mitad_izquierda != null)
-            salida_mitad_izquierda.release();
+        Mat salida_mitad_izquierda = null;
+        Mat entrada_mitad_izquierda = null;
 
         salida_mitad_izquierda = salida.submat(mitad_izquierda);
         entrada_mitad_izquierda = entrada.submat(mitad_izquierda);
         entrada_mitad_izquierda.copyTo(salida_mitad_izquierda);
+
+        entrada_mitad_izquierda.release();
+        salida_mitad_izquierda.release();
     }
 
     // Velocidades En España Ordenadas en binario

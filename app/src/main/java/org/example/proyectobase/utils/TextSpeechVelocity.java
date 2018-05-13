@@ -15,6 +15,7 @@ public class TextSpeechVelocity {
     private TextToSpeech tts;
 
     public void inicializaVoz(Context context) {
+
         tts = new TextToSpeech(context, new TextToSpeech.OnInitListener() {
             @Override
             public void onInit(int status) {

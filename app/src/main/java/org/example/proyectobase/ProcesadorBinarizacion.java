@@ -21,10 +21,6 @@ public class ProcesadorBinarizacion {
     public Mat maxDivided4(Mat entrada) {
         Mat salida = new Mat();
 
-        if (entrada.channels() > 1) {
-            return entrada.clone();
-        }
-
         Core.MinMaxLocResult minMax = Core.minMaxLoc(entrada);
         int maximum = (int) minMax.maxVal;
         int thresh = maximum / 4;
@@ -36,10 +32,6 @@ public class ProcesadorBinarizacion {
 
     public Mat otsu(Mat entrada) {
         Mat salida = new Mat();
-
-        if (entrada.channels() > 1) {
-            return entrada.clone();
-        }
 
         Core.MinMaxLocResult minMax = Core.minMaxLoc(entrada);
         int maximum = (int) minMax.maxVal;
@@ -53,10 +45,6 @@ public class ProcesadorBinarizacion {
     public Mat otsuInversa(Mat entrada) {
         Mat salida = new Mat();
 
-        if (entrada.channels() > 1) {
-            return entrada.clone();
-        }
-
         Core.MinMaxLocResult minMax = Core.minMaxLoc(entrada);
         int maximum = (int) minMax.maxVal;
         int thresh = maximum / 4;
@@ -69,9 +57,6 @@ public class ProcesadorBinarizacion {
     public Mat adaptativaGausiana(Mat entrada, int tamano, int contraste) {
         Mat salida = new Mat();
 
-        if (entrada.channels() > 1) {
-            return entrada.clone();
-        }
 
         //Calculo del gradiente morfológico.
 //        int contraste = 2;
@@ -86,28 +71,18 @@ public class ProcesadorBinarizacion {
 
     }
 
-    public Mat adaptativa(Mat entrada, int tamano, int contraste) {
+    public Mat adaptativa(Mat entrada, int tamano, double contraste) {
         Mat salida = new Mat();
 
-        if (entrada.channels() > 1) {
-            return entrada.clone();
-        }
-
         //Calculo del gradiente morfológico.
-//        int contraste = 2;
-//        int tamano = 7;
-        Imgproc.adaptiveThreshold(entrada, salida, 255,
-                Imgproc.ADAPTIVE_THRESH_MEAN_C,
-                Imgproc.THRESH_BINARY,
-                tamano, -contraste);
+        Imgproc.adaptiveThreshold(entrada, salida, 255, Imgproc.ADAPTIVE_THRESH_MEAN_C,
+                Imgproc.THRESH_BINARY, tamano, -contraste);
         return salida;
 
     }
 
     public Mat Canny(Mat entrada, int tamano, int contraste) {
-        if (entrada.channels() > 1) {
-            return entrada.clone();
-        }
+
         Mat salida = new Mat();
         Imgproc.Canny(entrada, salida, tamano, contraste);
 //        Imgproc.Canny(entrada, salida, 75, 200);
@@ -132,8 +107,6 @@ public class ProcesadorBinarizacion {
         Scalar mediaMat = Core.mean(entrada);
         int avg = (int) ((mediaMat.val)[0] + escalar);
         Imgproc.threshold(entrada, salida, avg, 255, Imgproc.THRESH_BINARY);
-
-
         return salida;
     }
 
@@ -153,6 +126,7 @@ public class ProcesadorBinarizacion {
                 salida = mediaPorFactor(salidaPreproceso, 1.8d);
                 break;
             case ADAPTATIVA:
+//                salida = adaptativa(salidaPreproceso, 7,7);
                 salida = adaptativa(salidaPreproceso, 7,7);
                 break;
             default:

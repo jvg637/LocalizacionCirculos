@@ -1,7 +1,6 @@
 package org.example.proyectobase;
 
 import android.util.Log;
-import android.widget.Toast;
 
 import org.opencv.core.Core;
 import org.opencv.core.Mat;
@@ -162,7 +161,7 @@ public class ProcesadorIntensidad {
         return salida;
     }
 
-    public Mat toGray(Mat entrada, Procesador.TipoIntensidadPreproceso tipoIntensidad) {
+    public Mat toGray(Mat entrada, Procesador.TipoIntensidad tipoIntensidad) {
         Mat salida = new Mat();
         Imgproc.cvtColor(entrada, salida, Imgproc.COLOR_RGBA2GRAY);
         if (tipoIntensidad != tipoIntensidad.SIN_PROCESO) {
@@ -173,7 +172,7 @@ public class ProcesadorIntensidad {
             return salida;
     }
 
-    public Mat intensifica(Mat entrada, Procesador.TipoIntensidadPreproceso tipoIntensidad) {
+    public Mat intensifica(Mat entrada, Procesador.TipoIntensidad tipoIntensidad) {
         Mat salida = null;
         switch (tipoIntensidad) {
             case EQUALIZ_HISTOGRAMA:

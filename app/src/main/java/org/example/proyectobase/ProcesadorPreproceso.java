@@ -19,15 +19,21 @@ public class ProcesadorPreproceso {
         procesadorIntensidad = new ProcesadorIntensidad();
     }
 
-    public Mat preproceso(Procesador.TipoPreproceso tipoPreproceso, Procesador.TipoIntensidadPreproceso tipoIntensidad, Mat entradaColor) {
+    public Mat preproceso(Procesador.TipoPreproceso tipoPreproceso, Procesador.TipoIntensidad tipoIntensidad, Mat entradaColor) {
         Mat salida;
         Mat gris = null;
         switch (tipoPreproceso) {
+            case GRADIENTE_MORFOLOGICO_DILATACION:
+                gris = procesadorIntensidad.toGray(entradaColor, tipoIntensidad);
+                salida = procesarLocal.residuoGradienteDilatacion(gris, 3 );
+//                salida = procesarLocal.residuoGradienteDilatacion(gris, 3);
+                break;
             case SIN_PROCESO:
+                // CASO NO EXISTE EN LAS PREFERENCIAS
                 salida = entradaColor.clone();
                 break;
             case ZONAS_ROJAS:
-                salida = procesadorColor.deteccionZonasRojas(entradaColor);
+                salida = procesadorColor.deteccionZonasRojas(entradaColor, tipoIntensidad);
                 break;
             case FILTRO_PASO_ALTO_NEG:
                 // Entrada Gris
@@ -40,10 +46,7 @@ public class ProcesadorPreproceso {
                 salida = procesarLocal.filtroPANegGaussiono(gris);
                 break;
 
-            case GRADIENTE_MORFOLOGICO_DILATACION:
-                gris = procesadorIntensidad.toGray(entradaColor, tipoIntensidad);
-                salida = procesarLocal.residuoGradienteDilatacion(gris, 3);
-                break;
+
 
             case SOBEL_LUMINANCIA:
                 gris = procesadorIntensidad.toGray(entradaColor, tipoIntensidad);
@@ -51,11 +54,11 @@ public class ProcesadorPreproceso {
                 break;
 
             case SOBEL_RED:
-                salida = procesarLocal.filtroSobelRed(entradaColor);
+                salida = procesarLocal.filtroSobelRed(entradaColor, tipoIntensidad);
                 break;
 
             case SOBEL_GREEN:
-                salida = procesarLocal.filtroSobelRed(entradaColor);
+                salida = procesarLocal.filtroSobelGreen(entradaColor, tipoIntensidad);
                 break;
 
             default:

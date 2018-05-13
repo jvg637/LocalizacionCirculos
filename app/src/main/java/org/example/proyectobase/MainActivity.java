@@ -23,10 +23,8 @@ import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.PopupMenu;
 import android.util.Log;
-import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
-import android.view.MotionEvent;
 import android.view.SubMenu;
 import android.view.View;
 import android.view.WindowManager;
@@ -49,7 +47,6 @@ import org.opencv.imgproc.Imgproc;
 import java.io.File;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 public class MainActivity extends AppCompatActivity implements CameraBridgeViewBase.CvCameraViewListener2,
@@ -126,7 +123,6 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
             procesador.setInicioX((int) (cam_anchura * 2.2 / 6.0));
             procesador.setFinX((int) (cam_anchura / 2.1 + procesador.getInicioX()));
         }
-
     }
 
     @Override
@@ -141,7 +137,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
     }
 
     private final long TIEMPO_MIN = 5000; // 5 segundos
-    private final long DISTANCIA_MIN = 1000; // 5000 metros
+    private final long DISTANCIA_MIN = 2000; // 2000 metros
     private LocationManager locationManager;
 
 
@@ -330,12 +326,14 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
         mResoluciones = ((JavaCameraView) cameraView).getSizes();
         listModes();
 
-        procesador = new Procesador(this, new ObserverVelocity() {
-            @Override
-            public void actualizaVelocidadLeida(int velocidadLeida) {
-                updateSpeed(speed, velocidadLeida);
-            }
-        });
+        if (procesador == null) {
+            procesador = new Procesador(this, new ObserverVelocity() {
+                @Override
+                public void actualizaVelocidadLeida(int velocidadLeida) {
+                    updateSpeed(speed, velocidadLeida);
+                }
+            });
+        }
         calculaCoordenadasZoom();
 
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
@@ -366,8 +364,8 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
         String valor = preferencias.getString("salida", Procesador.Salida.BINARIZACION_PREPROCESO.name());
         procesador.setMostrarSalida(Procesador.Salida.valueOf(valor));
 
-        valor = preferencias.getString("intensidad", Procesador.TipoIntensidadPreproceso.AUMENTO_LINEAL_CONTRASTE.name());
-        procesador.setTipoIntensidad(Procesador.TipoIntensidadPreproceso.valueOf(valor));
+        valor = preferencias.getString("intensidad", Procesador.TipoIntensidad.AUMENTO_LINEAL_CONTRASTE.name());
+        procesador.setTipoIntensidad(Procesador.TipoIntensidad.valueOf(valor));
 
         valor = preferencias.getString("preproceso", Procesador.TipoPreproceso.GRADIENTE_MORFOLOGICO_DILATACION.name());
         procesador.setTipoPreProceso(Procesador.TipoPreproceso.valueOf(valor));
@@ -383,14 +381,13 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
 
         valor = preferencias.getString("prioridad_deteccion", Procesador.TipoPrioridadDeteccionVelocidad.VELOCIDAD.name());
         procesador.setTipoPrioridadDeteccionVelocidad(Procesador.TipoPrioridadDeteccionVelocidad.valueOf(valor));
-//
+
         valor = preferencias.getString("estabilidad", "2");
         procesador.setEstabilizacion(Integer.parseInt(valor));
-//
         boolean valorBoleean = preferencias.getBoolean("zoom", false);
         procesador.setZoom(valorBoleean);
 
-        entrada = new Mat(height, width, CvType.CV_8UC4);
+        entrada = new Mat();
     }
 
     @Override
@@ -405,15 +402,14 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
     private Mat entrada, salida;
     private Procesador procesador;
 
+
+
     @Override
     public Mat onCameraFrame(CameraBridgeViewBase.CvCameraViewFrame inputFrame) {
-
         if (tipoEntrada == 0) {
             if (imagenRecurso_ != null)
                 imagenRecurso_.release();
-
             entrada = inputFrame.rgba();
-
         } else {
             if (recargarRecurso == true) {
                 if (imagenRecurso_ != null)
@@ -421,45 +417,52 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
                 else
                     imagenRecurso_ = new Mat();
                 //Poner aqui el nombre de los archivos copiados
-
                 Bitmap bitmap = BitmapFactory.decodeResource(getResources(),
                         RECURSOS_FICHEROS[tipoEntrada]);
                 //Convierte el recurso a una Mat de OpenCV
                 Utils.bitmapToMat(bitmap, imagenRecurso_);
                 Imgproc.resize(imagenRecurso_, imagenRecurso_, new Size(cam_anchura, cam_altura));
                 recargarRecurso = false;
-
-
             }
-
-            entrada = imagenRecurso_;
+            entrada = imagenRecurso_.clone();
         }
-
         if (salida != null)
             salida.release();
 
-        salida = procesador.procesa(entrada);
+        Mat entradaAux;
+        boolean guardadoPreparado = false;
+        // Para optimización la entrada = a la salida (nos evita un clone)
+        if (dividirImagen || guardarSiguienteImagen) {
+            entradaAux = entrada.clone();
+            guardadoPreparado = true;
+        } else
+            entradaAux = entrada;
+        salida = procesador.procesa(entradaAux);
 
         if (salida.channels() == 1)
             Imgproc.cvtColor(salida, salida, Imgproc.COLOR_GRAY2RGBA);
 
-        if (dividirImagen)
+        // Dividir Imagen
+        if (dividirImagen && procesador.getMostrarSalida() != Procesador.Salida.RECONOCIMIENTO)
             procesador.mitadMitad(entrada, salida);
 
-        if (guardarSiguienteImagen) {//Para foto salida debe ser rgba
+        // Guardar Imagen
+        if (guardadoPreparado && guardarSiguienteImagen) {//Para foto salida debe ser rgba
             takePhoto(entrada, salida);
             guardarSiguienteImagen = false;
         }
+
+        // Redimensiona la imagen de entrada fichero a la Salida
         if (tipoEntrada > 0) {
             //Es necesario que el tamaño de la salida coincida con el real de captura
             Imgproc.resize(salida, salida, new Size(cam_anchura, cam_altura));
         }
 
-        if (tipoEntrada == 0) {
-            if (salida.size().empty())
-                return entrada;
+        // Libera Memoria
+        if (entradaAux != entrada) {
             entrada.release();
         }
+
         return salida;
     }
 
@@ -490,6 +493,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
         if (!Imgcodecs.imwrite(photoPathOut, mBgr)) {
             Log.e(TAG, "Fallo al guardar " + photoPathOut);
         }
+        mBgr.release();
         if (input.channels() == 1)
             Imgproc.cvtColor(input, mBgr, Imgproc.COLOR_GRAY2BGR, 3);
         else
@@ -587,6 +591,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
 
     // Controla las opciones del menú
     private boolean guardarSiguienteImagen = false;
+
     private void clickMenu(MenuItem item) {
         switch (item.getItemId()) {
             case R.id.cambiarCamara:
@@ -605,9 +610,13 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
                 }
                 break;
 
+            case R.id.guardar_imagenes:
+                guardarSiguienteImagen = true;
+                break;
+
             case R.id.preferencias:
                 Intent i = new Intent(this, Preferencias.class);
-                recargarRecurso = true;
+//                recargarRecurso = true;
                 startActivity(i);
                 break;
             default:
@@ -621,6 +630,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
                     recargarRecurso = true;
                 }
         }
+//        String msg = "W=" + Integer.toString(cam_anchura) + " H= " + Integer.toString(cam_altura) + " Cam= " + Integer.toBinaryString(indiceCamara);
 //        String msg = "W=" + Integer.toString(cam_anchura) + " H= " + Integer.toString(cam_altura) + " Cam= " + Integer.toBinaryString(indiceCamara);
 //        Toast.makeText(MainActivity.this, msg, Toast.LENGTH_SHORT).show();
     }
@@ -674,7 +684,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
         txtCurrentSpeed.post(new Runnable() {
             @Override
             public void run() {
-                txtCurrentSpeed.setText(String.format("Vel:% 4.1f", speed) + " " + strUnits);
+                    txtCurrentSpeed.setText(String.format("Vel:% 4.1f", speed) + " " + strUnits);
             }
         });
 

@@ -27,7 +27,7 @@
         <item>EQUALIZ_HISTOGRAMA</item>
     </string-array>
     <string-array name="tipoPreProceso">
-        <item>SIN PROCESO</item>
+        <!--<item>SIN PROCESO</item>-->
         <item>ZONAS ROJAS</item>
         <item>FILTRO PASO ALTO -</item>
         <item>FILTRO PASO ALTO - (GAUSSIANO)</item>
@@ -37,7 +37,7 @@
         <item>SOBEL GREEN</item>
     </string-array>
     <string-array name="valorPreproceso">
-        <item>SIN_PROCESO</item>
+        <!--<item>SIN_PROCESO</item>-->
         <item>ZONAS_ROJAS</item>
         <item>FILTRO_PASO_ALTO_NEG</item>
         <item>FILTRO_PASO_ALTO_NEG_GAUSSIANO</item>
@@ -47,25 +47,25 @@
         <item>SOBEL_GREEN</item>
     </string-array>
     <string-array name="tipoBinarizacionPreproceso">
-        <item>SIN PROCESO</item>
+        <!--<item>SIN PROCESO</item>-->
         <item>ADAPTATIVA</item>
         <item>MEDIA</item>
         <item>MAXIMO</item>
     </string-array>
     <string-array name="valorBinarizacionPreproceso">
-        <item>SIN_PROCESO</item>
+        <!--<item>SIN_PROCESO</item>-->
         <item>ADAPTATIVA</item>
         <item>MEDIA</item>
         <item>MAXIMO</item>
     </string-array>
 
     <string-array name="tipoSegmentacion">
-        <item>SIN PROCESO</item>
+        <!--<item>SIN PROCESO</item>-->
         <item>Componente Roja</item>
         <item>Filtro Paso Alto Neg</item>
     </string-array>
     <string-array name="valorSegmentacion">
-        <item>SIN_PROCESO</item>
+        <!--<item>SIN_PROCESO</item>-->
         <item>COMPONENTE_ROJA</item>
         <item>FILTRO_PASO_ALTO_NEG</item>
     </string-array>
