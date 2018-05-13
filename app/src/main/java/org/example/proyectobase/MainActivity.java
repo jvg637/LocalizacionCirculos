@@ -36,6 +36,7 @@ import android.widget.Toast;
 
 import org.opencv.android.CameraBridgeViewBase;
 import org.opencv.android.InstallCallbackInterface;
+import org.opencv.android.JavaCameraView;
 import org.opencv.android.LoaderCallbackInterface;
 import org.opencv.android.OpenCVLoader;
 import org.opencv.android.Utils;
@@ -52,6 +53,8 @@ import java.util.List;
 
 public class MainActivity extends AppCompatActivity implements CameraBridgeViewBase.CvCameraViewListener2,
         LoaderCallbackInterface, LocationListener, GpsStatus.Listener, SensorEventListener, PopupMenu.OnMenuItemClickListener {
+
+    private final int GRUPO_RESOLUCIONES = 999999;
 
     //////////////////////////////////////////////////////////////////////////////
     //// ACELEROMETRO. CALCULA ÁNGULO DE ROTACION
@@ -171,7 +174,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
 
     private SensorManager mSensorManager;
 
-
+    private List<Camera.Size> mResoluciones;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -196,6 +199,8 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
             indiceCamara = CameraBridgeViewBase.CAMERA_ID_BACK;
         }
         cameraView.setCameraIndex(indiceCamara);
+
+
 
         // Inicializa menu contextual
         popup = new PopupMenu(this, findViewById(R.id.content_main));
@@ -315,6 +320,8 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
         cam_altura = height; //Estas son las que se usan de verdad
         cam_anchura = width;
 
+        mResoluciones = ((JavaCameraView) cameraView).getSizes();
+        listModes();
 
         procesador = new Procesador(this, new ObserverVelocity() {
             @Override
@@ -492,25 +499,13 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
     }
 
     private void listModes() {
-        Camera mCamera = Camera.open();
-        mCamera.lock();
-        Camera.Parameters params = mCamera.getParameters();
-
-// Check what resolutions are supported by your camera
-        List<Camera.Size> sizes = params.getSupportedVideoSizes();
-
-// Iterate through all available resolutions and choose one.
-// The chosen resolution will be stored in mSize.
-        Camera.Size mSize;
-
-        resolucion.getSubMenu().clear();
-        for (Camera.Size size : sizes) {
+        SubMenu subMenu = resolucion.getSubMenu();
+        subMenu.clear();
+        int cont=0;
+        for (Camera.Size size : mResoluciones) {
             Log.i(TAG, "Available resolution: " + size.width + " " + size.height);
-            resolucion.getSubMenu().add(size.width + "x" + size.height);
+            subMenu.add(GRUPO_RESOLUCIONES, 0, cont++, size.width + "x" + size.height);
         }
-        mCamera.unlock();
-
-
     }
 
     //Interface LoaderCallbackInterface
@@ -523,6 +518,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
 //                listModes();
                 cameraView.setMaxFrameSize(cam_anchura, cam_altura);
                 cameraView.enableView();
+
                 break;
             default:
                 Log.e(TAG, "OpenCV no se cargo");
@@ -595,28 +591,28 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
 //        return true;
 //    }
 
-    @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        super.onCreateOptionsMenu(menu);
-        MenuInflater inflater = getMenuInflater();
-        inflater.inflate(R.menu.menu, menu);
-        resolucion = menu.findItem(R.id.cambiarResolucion);
-        imagenes = menu.findItem(R.id.cambiar_entrada);
-
-        listarFicherosRaw();
-        return true;
-    }
+//    @Override
+//    public boolean onCreateOptionsMenu(Menu menu) {
+//        super.onCreateOptionsMenu(menu);
+//        MenuInflater inflater = getMenuInflater();
+//        inflater.inflate(R.menu.menu, menu);
+//        resolucion = menu.findItem(R.id.cambiarResolucion);
+//        imagenes = menu.findItem(R.id.cambiar_entrada);
+//
+//        listarFicherosRaw();
+//        return true;
+//    }
 
     private MenuItem resolucion;
     private MenuItem imagenes;
 
     private boolean guardarSiguienteImagen = false;
 
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        clickMenu(item);
-        return true;
-    }
+//    @Override
+//    public boolean onOptionsItemSelected(MenuItem item) {
+//        clickMenu(item);
+//        return true;
+//    }
 
     private void clickMenu(MenuItem item) {
         switch (item.getItemId()) {
@@ -625,37 +621,6 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
                     indiceCamara = CameraBridgeViewBase.CAMERA_ID_FRONT;
                 } else indiceCamara = CameraBridgeViewBase.CAMERA_ID_BACK;
                 recreate();
-                break;
-            case R.id.resolucion_1920x1080:
-
-                reiniciarResolucion(1920, 1080);
-                break;
-            case R.id.resolucion_1600x1200:
-
-                reiniciarResolucion(1600, 1200);
-                break;
-            case R.id.resolucion_1280x720:
-
-                reiniciarResolucion(1280, 720);
-                break;
-            case R.id.resolucion_960x720:
-
-                reiniciarResolucion(960, 720);
-                break;
-            case R.id.resolucion_800x600:
-
-                reiniciarResolucion(800, 600);
-                break;
-            case R.id.resolucion_640x480:
-
-                reiniciarResolucion(640, 480);
-                break;
-            case R.id.resolucion_320x240:
-
-                reiniciarResolucion(320, 240);
-                break;
-            case R.id.guardar_imagenes:
-                guardarSiguienteImagen = true;
                 break;
             case R.id.dividir_pantalla:
                 if (item.isChecked()) {
@@ -666,20 +631,18 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
                     item.setChecked(true);
                 }
                 break;
-            case R.id.aumento_lineal:
-                if (item.isChecked()) {
-                    aumentoLineal = false;
-                    item.setChecked(false);
-                } else {
-                    aumentoLineal = true;
-                    item.setChecked(true);
-                }
-                break;
+
             case R.id.preferencias:
                 Intent i = new Intent(this, Preferencias.class);
                 startActivity(i);
                 break;
             default:
+                int category = item.getGroupId();
+                int orden = item.getOrder();
+
+                if (category == GRUPO_RESOLUCIONES) {
+                    reiniciarResolucion(mResoluciones.get(orden));
+                }
                 String titulo = item.getTitle().toString();
                 if (titulo.startsWith("img:")) {
                     String imagen = item.getTitle().toString().split(":")[1];
@@ -698,10 +661,10 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
                 Toast.LENGTH_SHORT).show();
     }
 
-      public void reiniciarResolucion(int cols, int rows) {
+      public void reiniciarResolucion(Camera.Size size) {
 
-        cam_altura = rows;
-        cam_anchura = cols;
+        cam_altura = size.height;
+        cam_anchura = size.width;
 
         cameraView.disableView();
         cameraView.setMaxFrameSize(cam_anchura, cam_altura);

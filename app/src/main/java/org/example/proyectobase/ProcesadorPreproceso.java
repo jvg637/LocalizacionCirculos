@@ -19,7 +19,7 @@ public class ProcesadorPreproceso {
         procesadorIntensidad = new ProcesadorIntensidad();
     }
 
-    public Mat preproceso(Procesador.TipoPreproceso tipoPreproceso, Mat entradaColor) {
+    public Mat preproceso(Procesador.TipoPreproceso tipoPreproceso, Procesador.TipoIntensidadPreproceso tipoIntensidad, Mat entradaColor) {
         Mat salida;
         Mat gris = null;
         switch (tipoPreproceso) {
@@ -31,25 +31,22 @@ public class ProcesadorPreproceso {
                 break;
             case FILTRO_PASO_ALTO_NEG:
                 // Entrada Gris
-                if (entradaColor.channels() > 1) {
-                    gris = procesadorIntensidad.toGray(entradaColor);
-                    salida = procesarLocal.filtroPANeg(gris);
-                } else {
-                    salida = procesarLocal.filtroPANeg(entradaColor);
-                }
+                gris = procesadorIntensidad.toGray(entradaColor, tipoIntensidad);
+                salida = procesarLocal.filtroPANeg(gris);
+
                 break;
             case FILTRO_PASO_ALTO_NEG_GAUSSIANO:
-                gris = procesadorIntensidad.toGray(entradaColor);
+                gris = procesadorIntensidad.toGray(entradaColor, tipoIntensidad);
                 salida = procesarLocal.filtroPANegGaussiono(gris);
                 break;
 
             case GRADIENTE_MORFOLOGICO_DILATACION:
-                gris = procesadorIntensidad.toGray(entradaColor);
+                gris = procesadorIntensidad.toGray(entradaColor, tipoIntensidad);
                 salida = procesarLocal.residuoGradienteDilatacion(gris, 3);
                 break;
 
             case SOBEL_LUMINANCIA:
-                gris = procesadorIntensidad.toGray(entradaColor);
+                gris = procesadorIntensidad.toGray(entradaColor, tipoIntensidad);
                 salida = procesarLocal.filtroSobel(gris);
                 break;
 

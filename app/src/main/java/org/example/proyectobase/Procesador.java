@@ -207,7 +207,7 @@ public class Procesador {
      * @return
      */
     public int leerDigitoOcr(Mat entrada) {
-        entrada_gris = procesadorIntensidad.toGray(entrada);
+        entrada_gris = procesadorIntensidad.toGray(entrada, tipoIntensidad);
 //Binarizacion Otsu
         binaria1 = procesarBinarizacion.otsuInversa(entrada_gris);
 //Leer numero
@@ -319,18 +319,8 @@ public class Procesador {
             entrada = entradaIn.submat(inicioY, finY, inicioX, finX);
         }
 
-        Mat salidaIntensidad;
-        if (tipoIntensidad != TipoIntensidadPreproceso.SIN_PROCESO) {
-            salidaIntensidad = procesadorIntensidad.intensifica(entradaIn, tipoIntensidad);
-        } else {
-            salidaIntensidad = entrada;
-        }
-
         escribeLog("Preproceso=" + tipoPreProceso.name());
-        Mat salidaPreproceso = procesarLocal.preproceso(tipoPreProceso, salidaIntensidad);
-
-        if (salidaIntensidad != entrada)
-            salidaIntensidad.release();
+        Mat salidaPreproceso = procesarLocal.preproceso(tipoPreProceso, tipoIntensidad, entrada);
 
         if (mostrarSalida == Salida.PREPROCESO) {
             Imgproc.cvtColor(salidaPreproceso, salidaPreproceso, Imgproc.COLOR_GRAY2RGBA);
@@ -444,11 +434,18 @@ public class Procesador {
                     }
 
                     if (mostrarSalida == Salida.SEGMENTACION_CIRCULO) {
-                        dibujaDigitosEncontrados(circulo, rectDigits);
-                        circulo = rotate(circulo, anguloARotar);
+                        Mat circuloGris = procesadorIntensidad.toGray(circulo, tipoIntensidad);
+                        Mat circuloBinario = procesarBinarizacion.binarizacionPreproceso(tipoBinarizacionDisco, circuloGris);
+
+                        Imgproc.cvtColor(circuloBinario, circuloBinario, Imgproc.COLOR_GRAY2RGBA);
+                        dibujaDigitosEncontrados(circuloBinario, rectDigits);
+                        circulo = rotate(circuloBinario, anguloARotar);
+
                         Mat aux = salidaBinarizacionPreproceso.submat(rectCirculo);
-                        circulo.copyTo(aux);
+                        circuloBinario.copyTo(aux);
                         dibujaCirculosEncontratos(salidaBinarizacionPreproceso, rectCirculo);
+                        circuloGris.release();
+                        circuloBinario.release();
                     }
                 }
 
@@ -609,7 +606,6 @@ public class Procesador {
 
         Mat red = new Mat();
         Mat binaria;
-        Mat gray = new Mat();
         Mat paNeg = new Mat();
 
 
@@ -618,11 +614,17 @@ public class Procesador {
                 return;
             case COMPONENTE_ROJA:
                 Core.extractChannel(color, red, 0);
-                binaria = procesarBinarizacion.otsuInversa(red);
+                Mat gray;
+                if (tipoIntensidad != TipoIntensidadPreproceso.SIN_PROCESO) {
+                    gray = procesadorIntensidad.intensifica(red, tipoIntensidad);
+                } else {
+                    gray = red;
+                }
+                binaria = procesarBinarizacion.otsuInversa(gray);
+                if (gray != red) gray.release();
                 break;
             case FILTRO_PASO_ALTO_NEG:
-                gray = procesadorIntensidad.toGray(color);
-                paNeg = procesarLocal.preproceso(TipoPreproceso.FILTRO_PASO_ALTO_NEG, gray);
+                paNeg = procesarLocal.preproceso(TipoPreproceso.FILTRO_PASO_ALTO_NEG, tipoIntensidad, color);
                 binaria = procesarBinarizacion.otsu(paNeg);
                 break;
             default:
@@ -636,11 +638,14 @@ public class Procesador {
 
         Imgproc.findContours(binaria, blobs, hierarchy, Imgproc.RETR_CCOMP,
                 Imgproc.CHAIN_APPROX_NONE);
-//        int minimumHeight = 12;
+        //        int minimumHeight = 12;
         int minimumHeight = 8;
 
         // Seleccionar candidatos a circulos
-        for (int c = 0; c < blobs.size(); c++) {
+        for (
+                int c = 0; c < blobs.size(); c++)
+
+        {
             Rect BB = Imgproc.boundingRect(blobs.get(c));
 // Comprobar tamaño
 //            if (BB.width < minimumHeight || BB.height < minimumHeight)
@@ -671,11 +676,12 @@ public class Procesador {
         blobs.clear();
         hierarchy.release();
         red.release();
-        gray.release();
         binaria.release();
         paNeg.release();
 
-        if (rectDigits.size() >= 2 && rectDigits.size() <= 3) {
+        if (rectDigits.size() >= 2 && rectDigits.size() <= 3)
+
+        {
             // Ordena las colecciones por posición
             Collections.sort(rectDigits, new Comparator<Rect>() {
                 @Override
@@ -704,9 +710,12 @@ public class Procesador {
 //                rectDigit.x += rectCirculo.x;
 //                rectDigit.y += rectCirculo.y;
             }
-        } else {
+        } else
+
+        {
             rectDigits.clear();
         }
+
     }
 
     /**

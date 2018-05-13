@@ -32,7 +32,7 @@ public class ProcesadorColor {
 
     public Mat deteccionZonasRojas(Mat entrada) {
 
-        if (entrada.channels()<3) {
+        if (entrada.channels()==1) {
             return entrada.clone();
         }
 

@@ -80,12 +80,6 @@
         app:actionViewClass="android.widget.CheckBox" />
 
     <item
-        android:id="@+id/aumento_lineal"
-        android:checkable="true"
-        android:checked="false"
-        android:title=" Aumento Lineal "
-        app:actionViewClass="android.widget.CheckBox" />
-    <item
         android:id="@+id/preferencias"
         android:icon="@android:drawable/ic_menu_preferences"
         android:title="Preferencias" />

@@ -126,9 +126,10 @@ public class ProcesadorIntensidad {
 
     public Mat ecualizacionHistograma(Mat entrada) {
         // Aumento Linear Contraste
-        Mat salida;
+        Mat salida = new Mat();
+        ;
         if (entrada.channels() == 1) {
-            salida = aumentoLinealContraste1Canal(entrada);
+            Imgproc.equalizeHist(entrada, salida);
         } else {
 
             Mat red = new Mat();
@@ -149,8 +150,6 @@ public class ProcesadorIntensidad {
 
             List<Mat> lstMat = Arrays.asList(redC, greenC, blueC, alfa);
 
-            salida = new Mat();
-
             Core.merge(lstMat, salida);
             red.release();
             blue.release();
@@ -163,10 +162,15 @@ public class ProcesadorIntensidad {
         return salida;
     }
 
-    public Mat toGray(Mat entrada) {
+    public Mat toGray(Mat entrada, Procesador.TipoIntensidadPreproceso tipoIntensidad) {
         Mat salida = new Mat();
         Imgproc.cvtColor(entrada, salida, Imgproc.COLOR_RGBA2GRAY);
-        return salida;
+        if (tipoIntensidad != tipoIntensidad.SIN_PROCESO) {
+            Mat salidaIntensidad = intensifica(salida, tipoIntensidad);
+            salida.release();
+            return salidaIntensidad;
+        } else
+            return salida;
     }
 
     public Mat intensifica(Mat entrada, Procesador.TipoIntensidadPreproceso tipoIntensidad) {

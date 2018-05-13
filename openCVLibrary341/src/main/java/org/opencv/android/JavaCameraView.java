@@ -43,6 +43,12 @@ public class JavaCameraView extends CameraBridgeViewBase implements PreviewCallb
     private SurfaceTexture mSurfaceTexture;
     private int mPreviewFormat = ImageFormat.NV21;
 
+    public List<Camera.Size> getSizes() {
+        return mSizes;
+    }
+
+    private List<Camera.Size> mSizes = null;
+
     public static class JavaCameraSizeAccessor implements ListItemAccessor {
 
         @Override
@@ -140,11 +146,17 @@ public class JavaCameraView extends CameraBridgeViewBase implements PreviewCallb
             try {
                 Camera.Parameters params = mCamera.getParameters();
                 Log.d(TAG, "getSupportedPreviewSizes()");
-                List<android.hardware.Camera.Size> sizes = params.getSupportedPreviewSizes();
 
-                if (sizes != null) {
+
+
+                if (mSizes !=null) {
+                    mSizes.clear();
+                }
+                mSizes = params.getSupportedPreviewSizes();
+
+                if (mSizes != null) {
                     /* Select the size that fits surface considering maximum size allowed */
-                    Size frameSize = calculateCameraFrameSize(sizes, new JavaCameraSizeAccessor(), width, height);
+                    Size frameSize = calculateCameraFrameSize(mSizes, new JavaCameraSizeAccessor(), width, height);
 
                     /* Image format NV21 causes issues in the Android emulators */
                     if (Build.FINGERPRINT.startsWith("generic")
